@@ -3,9 +3,9 @@
 uint64_t perft(Game &g, int depth) {
 	Position &p = g.pos();
 
-	if (p.side == WHITE && p.control(__tzcnt_u64(p.piece_boards[KING] & p.piece_boards[OCC(BLACK)]), WHITE))
+	if (p.side == WHITE && p.control(_tzcnt_u64(p.piece_boards[KING] & p.piece_boards[OCC(BLACK)]), WHITE))
 		return 0;
-	if (p.side == BLACK && p.control(__tzcnt_u64(p.piece_boards[KING] & p.piece_boards[OCC(WHITE)]), BLACK))
+	if (p.side == BLACK && p.control(_tzcnt_u64(p.piece_boards[KING] & p.piece_boards[OCC(WHITE)]), BLACK))
 		return 0;
 
 	if (depth == 0)

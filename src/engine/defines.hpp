@@ -11,6 +11,57 @@
 
 #define MAX_PLY (256)
 
+#ifndef __x86_64__
+constexpr uint64_t __bsrq(uint64_t x) {
+	uint64_t pos = 0;
+	while (x >>= 1)
+		pos++;
+	return pos;
+}
+
+constexpr uint64_t _blsmsk_u64(uint64_t x) {
+	return x & -x;
+}
+
+constexpr uint64_t _blsr_u64(uint64_t x) {
+	return x & (x - 1);
+}
+
+constexpr uint64_t _tzcnt_u64(uint64_t x) {
+	if (x == 0)
+		return 64;
+	uint64_t pos = 0;
+	while ((x & 1) == 0) {
+		x >>= 1;
+		pos++;
+	}
+	return pos;
+}
+
+constexpr uint64_t _pext_u64(uint64_t src, uint64_t mask) {
+	uint64_t result = 0;
+	uint64_t bb = 1;
+	for (uint64_t bb_mask = 1; mask; bb_mask <<= 1) {
+		if (mask & bb_mask) {
+			if (src & bb_mask)
+				result |= bb;
+			bb <<= 1;
+			mask &= ~bb_mask;
+		}
+	}
+	return result;
+}
+
+constexpr uint64_t _mm_popcnt_u64(uint64_t x) {
+	uint64_t count = 0;
+	while (x) {
+		x &= x - 1;
+		count++;
+	}
+	return count;
+}
+#endif
+
 enum Color : bool {
 	WHITE,
 	BLACK,
