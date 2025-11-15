@@ -13,7 +13,7 @@ with open("src/engine/nnue.bin", "wb") as f:
 
 run(["make", "-C", "src/engine", "-j"])
 
-p = Popen("src/a.out", stdin=PIPE, stdout=PIPE, text=True)
+p = Popen("src/engine/ripdanya", stdin=PIPE, stdout=PIPE, text=True)
 p.stdin.write("uci\n")
 p.stdin.flush()
 
@@ -23,7 +23,7 @@ def test_func(ctx: GameContext):
     # Return a python-chess Move object that is a legal move for the current position
 
     p.stdin.write(f"position fen {ctx.board.fen()}\n")
-    p.stdin.write(f"go movetime {8000}\n")
+    p.stdin.write(f"go movetime {ctx.timeLeft / 20}\n")
     p.stdin.flush()
 
     while True:
