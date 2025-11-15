@@ -44,6 +44,8 @@ __attribute__((constructor)) void init_mvv_lva() {
 
 int history[2][64][64];
 
+SSEntry ss[MAX_PLY];
+
 Value qsearch(Game &g, Value alpha, Value beta) {
 	nodes++;
 
@@ -135,13 +137,20 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 
 	// Move ordering
 	for (Move &m : moves) {
+		constexpr int CAPT_BASE = 1000000;
+		constexpr int KILL_BASE = 100000;
+
 		int score = 0;
 		if (board.mailbox[m.dst()] != NO_PIECE) {
 			// Captures
-			score += MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7] + 1000000;
+			score += MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7] + CAPT_BASE;
 		} else {
 			// History heuristic
 			score += history[board.side][m.src()][m.dst()];
+
+			// Killer moves
+			if (ss[ply].killer0 == m || ss[ply].killer1 == m)
+				score += KILL_BASE;
 		}
 		order.push_back({-score, m});
 	}
@@ -170,6 +179,11 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 		if (score >= beta) {
 			if (!capt && mv.type() != PROMOTION) {
 				history[board.side][mv.src()][mv.dst()] += depth * depth;
+
+				if (ss[ply].killer0 != mv && ss[ply].killer1 != mv) {
+					ss[ply].killer1 = ss[ply].killer0;
+					ss[ply].killer0 = mv;
+				}
 			}
 			if (root)
 				g_best = best_move;
@@ -208,6 +222,7 @@ Move search(Game &g, int time, int depth) {
 	g_best = NullMove;
 
 	memset(history, 0, sizeof(history));
+	memset(ss, 0, sizeof(ss));
 
 	for (int i = 1; i <= depth; i++) {
 		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true);
