@@ -6,6 +6,7 @@
 #include <immintrin.h>
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
