@@ -4,6 +4,15 @@
 
 #include <sstream>
 
+int timeman(int time, int inc) {
+	time -= 80;
+	if (inc == 0 && time < 1000)
+		return time / 50;
+	else if (inc == 0)
+		return time / 30;
+	return time / 25 + inc * 3 / 5;
+}
+
 void uci() {
 	Game g("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
@@ -66,9 +75,9 @@ void uci() {
 			if (movetime != -1)
 				m = search(g, movetime, 1e9);
 			else if (g.pos().side == WHITE && wtime != -1)
-				m = search(g, wtime / 20, 1e9);
+				m = search(g, timeman(wtime, winc), 1e9);
 			else if (g.pos().side == BLACK && btime != -1)
-				m = search(g, btime / 20, 1e9);
+				m = search(g, timeman(btime, binc), 1e9);
 			else if (depth != -1)
 				m = search(g, 1e9, depth);
 

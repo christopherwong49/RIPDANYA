@@ -180,6 +180,9 @@ Move search(Game &g, int time, int depth) {
 			break;
 		std::cout << "info depth " << i << " score " << score_to_string(score) << " nodes " << nodes << " pv " << g_best.to_string() << std::endl;
 		can_exit = true;
+
+		if (clock() - start_time >= mx_time * (CLOCKS_PER_SEC / 1000) * 0.6)
+			break;
 	}
 
 	return g_best;

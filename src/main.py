@@ -23,7 +23,7 @@ def test_func(ctx: GameContext):
     # Return a python-chess Move object that is a legal move for the current position
 
     p.stdin.write(f"position fen {ctx.board.fen()}\n")
-    p.stdin.write(f"go movetime {ctx.timeLeft / 20}\n")
+    p.stdin.write(f"go wtime {ctx.timeLeft} btime {ctx.timeLeft}\n")
     p.stdin.flush()
 
     while True:
