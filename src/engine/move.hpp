@@ -47,3 +47,5 @@ public:
 	std::string to_string() const;
 	static Move from_string(const std::string &s, Position &p);
 };
+
+constexpr Move NullMove = Move(0);

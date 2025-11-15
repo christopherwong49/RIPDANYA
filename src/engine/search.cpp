@@ -26,9 +26,22 @@ uint64_t perft(Game &g, int depth) {
 
 Move g_best;
 uint64_t nodes;
+bool early_exit = false;
+bool can_exit = false;
 
-Value qsearch(Game &g, Value alpha = -1e9, Value beta = 1e9) {
+clock_t start_time;
+clock_t end_time;
+uint64_t mx_time;
+
+Value qsearch(Game &g, Value alpha, Value beta) {
 	nodes++;
+
+	if ((nodes & 0xfff) == 0) {
+		if (can_exit && (clock() - start_time) / (CLOCKS_PER_SEC / 1000) >= mx_time) {
+			early_exit = true;
+			return 0;
+		}
+	}
 
 	Position &board = g.pos();
 	if (board.control(_tzcnt_u64(board.piece_boards[5] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
@@ -55,6 +68,9 @@ Value qsearch(Game &g, Value alpha = -1e9, Value beta = 1e9) {
 			Value score = -qsearch(g, -beta, -alpha);
 			g.unmake_move();
 
+			if (early_exit)
+				return 0;
+
 			if (score > stand_pat) {
 				stand_pat = score;
 				if (score > alpha) {
@@ -80,6 +96,13 @@ Value qsearch(Game &g, Value alpha = -1e9, Value beta = 1e9) {
 Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 	nodes++;
 
+	if ((nodes & 0xfff) == 0) {
+		if (can_exit && (clock() - start_time) / (CLOCKS_PER_SEC / 1000) >= mx_time) {
+			early_exit = true;
+			return 0;
+		}
+	}
+
 	Position &board = g.pos();
 	if (board.control(_tzcnt_u64(board.piece_boards[5] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
@@ -93,16 +116,20 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 	// order_moves(board, moves, ply);
 
 	Value best = -VALUE_INFINITE;
+	Move best_move = NullMove;
 
 	for (Move &mv : moves) {
 		g.make_move(mv);
 		Value score = -negamax(g, depth - 1, ply + 1, -beta, -alpha, false);
 		g.unmake_move();
+		if (early_exit)
+			return 0;
 
 		if (score > best) {
 			best = score;
 			if (score > alpha) {
 				alpha = score;
+				best_move = mv;
 			}
 		}
 
@@ -114,16 +141,43 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 			}
 			*/
 			if (root)
-				g_best = best;
+				g_best = best_move;
 			return best;
 		}
 	}
 
 	if (root)
-		g_best = best;
+		g_best = best_move;
 	return best;
 }
 
-Move search(Game &g, int time) {
+std::string score_to_string(Value score) {
+	if (score >= VALUE_MATE_MAX_PLY) {
+		return "mate " + std::to_string((VALUE_MATE - score + 1) / 2);
+	} else if (score <= -VALUE_MATE_MAX_PLY) {
+		return "mate " + std::to_string((-VALUE_MATE - score) / 2);
+	} else {
+		return "cp " + std::to_string(score);
+	}
+}
+
+Move search(Game &g, int time, int depth) {
+	clock_t start_time = clock();
+	mx_time = time;
+	nodes = 0;
+	can_exit = false;
+	early_exit = false;
+	g_best = NullMove;
+
+	g.pos().print_board();
+
+	for (int i = 1; i <= depth; i++) {
+		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true);
+		if (early_exit)
+			break;
+		std::cout << "info depth " << i << " score " << score_to_string(score) << " nodes " << nodes << " pv " << g_best.to_string() << std::endl;
+		can_exit = true;
+	}
+
 	return g_best;
 }

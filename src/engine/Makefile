@@ -6,6 +6,10 @@ HDRS := $(find . -name '*.hpp')
 CXX := g++
 CXXFLAGS := -std=c++20 -m64
 
+ifdef EVALFILE
+CXXFLAGS += -DNNUE_PATH=$(EVALFILE)
+endif
+
 RELEASEFLAGS := -O3 -march=native
 DEBUGFLAGS := -g -O0 -march=x86-64-v3
 

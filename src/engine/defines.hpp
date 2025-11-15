@@ -24,7 +24,7 @@ enum Castling : uint8_t {
 	BLACK_OO = BLACK_OOO << 1, // 8
 };
 
-typedef uint16_t Value;
+typedef int16_t Value;
 constexpr Value VALUE_INFINITE = 32000;
 constexpr Value VALUE_MATE = 30000;
 constexpr Value VALUE_MATE_MAX_PLY = VALUE_MATE - MAX_PLY;
@@ -65,5 +65,5 @@ enum Piece : uint8_t {
 constexpr PieceType letter_piece[] = {BISHOP, NO_PIECETYPE, NO_PIECETYPE, NO_PIECETYPE, NO_PIECETYPE, NO_PIECETYPE, NO_PIECETYPE, NO_PIECETYPE, NO_PIECETYPE,
 									  KING,	  NO_PIECETYPE, NO_PIECETYPE, KNIGHT,		NO_PIECETYPE, PAWN,			QUEEN,		  ROOK};
 
-constexpr char piecetype_letter[] = "pnbqrk?";
+constexpr char piecetype_letter[] = "pnbrqk?";
 constexpr char piece_letter[] = "PNBRQK??pnbrqk.";

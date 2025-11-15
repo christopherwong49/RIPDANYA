@@ -5,30 +5,46 @@
 #include <sstream>
 
 void uci() {
+	Game g("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
 	std::string input;
 
 	while (std::getline(std::cin, input)) {
 		if (input == "uci") {
+			std::cout << "id name RIPDANYA" << std::endl;
 			std::cout << "option name Hash type spin default 256 min 128 max 2048" << std::endl;
 			std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
 			std::cout << "uciok" << std::endl;
 		} else if (input == "isready") {
 			std::cout << "readyok" << std::endl;
 		} else if (input.substr(0, 8) == "position") {
+			size_t endpos = input.find("moves");
 			if (input.substr(9, 8) == "startpos") {
-				std::string moves = input.substr(18);
-
-				// reset board
-
+				g.pos().load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 			} else if (input.substr(9, 3) == "fen") {
-				std::string fen = input.substr(13);
+				std::string fen = input.substr(13, endpos - 13 - 1);
+				g.pos().load_fen(fen);
 			}
+			if (endpos != std::string::npos) {
+				std::string moves = input.substr(endpos + 6);
+				std::stringstream ss(moves);
+				std::string move_str;
+				while (ss >> move_str) {
+					Move m = Move::from_string(move_str, g.pos());
+					g.make_move(m);
+				}
+			}
+			g.commit();
 		} else if (input.substr(0, 2) == "go") {
 			std::stringstream ss(input);
 			std::string token;
 
-			int wtime, btime, winc, binc;
-			int movetime;
+			int wtime = -1;
+			int btime = -1;
+			int winc = -1;
+			int binc = -1;
+			int movetime = -1;
+			int depth = -1;
 
 			while (ss >> token) {
 				if (token == "wtime") {
@@ -41,16 +57,30 @@ void uci() {
 					ss >> binc;
 				} else if (token == "movetime") {
 					ss >> movetime;
+				} else if (token == "depth") {
+					ss >> depth;
 				}
 			}
 
-			std::cout << "best move " << std::endl;
+			Move m;
+			if (movetime != -1)
+				m = search(g, movetime / 20, 1e9);
+			else if (g.pos().side == WHITE && wtime != -1)
+				m = search(g, wtime / 20, 1e9);
+			else if (g.pos().side == BLACK && btime != -1)
+				m = search(g, btime / 20, 1e9);
+			else if (depth != -1)
+				m = search(g, 1e9, depth);
+
+			std::cout << "bestmove " << m.to_string() << std::endl;
+		} else if (input == "eval") {
+			std::cout << eval(g.pos()) << std::endl;
 		}
 	}
 }
 
 int main(int argc, char *argv[]) {
-	if (argc == 2 && argv[1] == "bench") {
+	if (argc >= 2 && std::string("bench") == argv[1]) {
 		const std::string bench_positions[] = {
 			"r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQkq - 0 14",
 			"4rrk1/2p1b1p1/p1p3q1/4p3/2P2n1p/1P1NR2P/PB3PP1/3R1QK1 b - - 2 24",
@@ -103,6 +133,18 @@ int main(int argc, char *argv[]) {
 			"3br1k1/p1pn3p/1p3n2/5pNq/2P1p3/1PN3PP/P2Q1PB1/4R1K1 w - - 0 23",
 			"2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93",
 		};
+
+		clock_t start = clock();
+		uint64_t total_nodes = 0;
+		for (auto &fen : bench_positions) {
+			Game g(fen);
+			search(g, 1e9, 4);
+
+			total_nodes += nodes;
+		}
+		clock_t end = clock();
+
+		std::cout << "nodes " << total_nodes << " nps " << int(total_nodes / ((double)(end - start) / CLOCKS_PER_SEC)) << std::endl;
 
 		return 0;
 	}

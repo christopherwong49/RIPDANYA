@@ -3,6 +3,7 @@
 #include "nnue.hpp"
 
 #include <algorithm>
+#include <cstring>
 
 #ifndef NNUE_PATH
 #define NNUE_PATH "nnue.bin"
@@ -16,11 +17,40 @@ INCBIN(network_weights, NNUE_PATH);
 #define QA 255
 #define QB 64
 #define SCALE 400
+#define NINPUTS 16
+#define NOUTPUTS 8
 
-int16_t *accumulator_weights = (int16_t *)gnetwork_weightsData;
-int16_t *accumulator_biases = accumulator_weights + (768 * 16) * (HL_SIZE);
-int16_t *output_weights = accumulator_biases + (HL_SIZE);
-int16_t *output_bias = output_weights + (16) * (HL_SIZE * 2);
+// int16_t *accumulator_weights = (int16_t *)gnetwork_weightsData;
+// int16_t *accumulator_biases = accumulator_weights + (768 * NBUCKETS) * (HL_SIZE);
+// int16_t *output_weights = accumulator_biases + (HL_SIZE);
+// int16_t *output_bias = output_weights + (8) * (HL_SIZE * 2);
+
+namespace net {
+	static int16_t accumulator_weights[768 * NINPUTS][HL_SIZE];
+	static int16_t accumulator_biases[HL_SIZE];
+	static int16_t output_weights[NOUTPUTS][2 * HL_SIZE];
+	static int16_t output_bias[NOUTPUTS];
+};
+
+__attribute__((constructor)) void load_nnue() {
+	size_t offset = 0;
+
+	size_t size = sizeof(net::accumulator_weights);
+	memcpy(net::accumulator_weights, gnetwork_weightsData + offset, size);
+	offset += size;
+
+	size = sizeof(net::accumulator_biases);
+	std::memcpy(net::accumulator_biases, gnetwork_weightsData + offset, size);
+	offset += size;
+
+	size = sizeof(net::output_weights);
+	std::memcpy(net::output_weights, gnetwork_weightsData + offset, size);
+	offset += size;
+
+	size = sizeof(net::output_bias);
+	std::memcpy(net::output_bias, gnetwork_weightsData + offset, size);
+	offset += size;
+}
 
 int calculate_index(int sq, PieceType pt, bool side, bool perspective, int nbucket) {
 	if (nbucket & 1) {
@@ -38,13 +68,13 @@ int calculate_index(int sq, PieceType pt, bool side, bool perspective, int nbuck
 
 void accumulator_add(Accumulator &acc, int index) {
 	for (int i = 0; i < HL_SIZE; i++) {
-		acc.val[i] += accumulator_weights[index * HL_SIZE + i];
+		acc.val[i] += net::accumulator_weights[index][i];
 	}
 }
 
-void accumulator_sub(Accumulator &acc, uint16_t index) {
+void accumulator_sub(Accumulator &acc, int index) {
 	for (int i = 0; i < HL_SIZE; i++) {
-		acc.val[i] -= accumulator_weights[index * HL_SIZE + i];
+		acc.val[i] -= net::accumulator_weights[index][i];
 	}
 }
 
@@ -54,15 +84,13 @@ int32_t nnue_eval(const Accumulator &stm, const Accumulator &ntm, uint8_t nbucke
 	for (int i = 0; i < HL_SIZE; i++) {
 		int32_t v1 = std::clamp(stm.val[i], (int16_t)0, (int16_t)QA);
 		int32_t v2 = std::clamp(ntm.val[i], (int16_t)0, (int16_t)QA);
-		v1 *= v1;
-		v2 *= v2;
 
-		score += v1 * output_weights[nbucket * 2 * HL_SIZE + i];
-		score += v2 * output_weights[nbucket * 2 * HL_SIZE + HL_SIZE + i];
+		score += v1 * v1 * net::output_weights[nbucket][i];
+		score += v2 * v2 * net::output_weights[nbucket][HL_SIZE + i];
 	}
 
 	score /= QA;
-	score += output_bias[nbucket];
+	score += net::output_bias[nbucket];
 	score *= SCALE;
 	score /= QA * QB;
 	return score;
@@ -87,14 +115,13 @@ Value eval(Position &p) {
 	int nbucket = (_mm_popcnt_u64(p.piece_boards[OCC(WHITE)] | p.piece_boards[OCC(BLACK)]) - 2) / 4;
 
 	int wbucket = bucket_layout[_tzcnt_u64(p.piece_boards[OCC(WHITE)] & p.piece_boards[KING])];
-	int bbucket = bucket_layout[_tzcnt_u64(p.piece_boards[OCC(BLACK)] & p.piece_boards[KING])];
+	int bbucket = bucket_layout[0b111000 ^ _tzcnt_u64(p.piece_boards[OCC(BLACK)] & p.piece_boards[KING])];
 
-	Accumulator stm_acc = {};
-	Accumulator ntm_acc = {};
+	Accumulator w_acc, b_acc;
 
 	for (int i = 0; i < HL_SIZE; i++) {
-		stm_acc.val[i] = accumulator_biases[i];
-		ntm_acc.val[i] = accumulator_biases[i];
+		w_acc.val[i] = net::accumulator_biases[i];
+		b_acc.val[i] = net::accumulator_biases[i];
 	}
 
 	for (int sq = 0; sq < 64; sq++) {
@@ -103,9 +130,17 @@ Value eval(Position &p) {
 			continue;
 
 		PieceType pt = PieceType(piece & 7);
-		bool side = OCC(piece >> 3);
+		bool side = piece >> 3;
 
-		accumulator_add(stm_acc, calculate_index(sq, pt, side, p.side, nbucket));
-		accumulator_add(ntm_acc, calculate_index(sq, pt, side, !p.side, nbucket));
+		int windex = calculate_index(sq, pt, side, WHITE, wbucket);
+		int bindex = calculate_index(sq, pt, side, BLACK, bbucket);
+
+		accumulator_add(w_acc, windex);
+		accumulator_add(b_acc, bindex);
 	}
+
+	if (p.side == WHITE)
+		return nnue_eval(w_acc, b_acc, nbucket);
+	else
+		return nnue_eval(b_acc, w_acc, nbucket);
 }
