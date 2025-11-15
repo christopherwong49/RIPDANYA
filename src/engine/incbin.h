@@ -161,35 +161,36 @@
 #endif
 
 #if defined(__APPLE__)
-#  include <TargetConditionals.h>
-#  if defined(TARGET_OS_IPHONE) && !defined(INCBIN_SILENCE_BITCODE_WARNING)
-#    warning "incbin is incompatible with bitcode. Using the library will break upload to App Store if you have bitcode enabled. Add `#define INCBIN_SILENCE_BITCODE_WARNING` before including this header to silence this warning."
-#  endif
+#include "TargetConditionals.h"
+#if defined(TARGET_OS_IPHONE) && !defined(INCBIN_SILENCE_BITCODE_WARNING)
+#warning                                                                                                                                                       \
+	"incbin is incompatible with bitcode. Using the library will break upload to App Store if you have bitcode enabled. Add `#define INCBIN_SILENCE_BITCODE_WARNING` before including this header to silence this warning."
+#endif
 /* The directives are different for Apple branded compilers */
-#  define INCBIN_SECTION         INCBIN_OUTPUT_SECTION "\n"
-#  define INCBIN_GLOBAL(NAME)    ".globl " INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME "\n"
-#  define INCBIN_INT             ".long "
-#  define INCBIN_MANGLE          "_"
-#  define INCBIN_BYTE            ".byte "
-#  define INCBIN_TYPE(...)
+#define INCBIN_SECTION INCBIN_OUTPUT_SECTION "\n"
+#define INCBIN_GLOBAL(NAME) ".globl " INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME "\n"
+#define INCBIN_INT ".long "
+#define INCBIN_MANGLE "_"
+#define INCBIN_BYTE ".byte "
+#define INCBIN_TYPE(...)
 #else
-#  define INCBIN_SECTION         ".section " INCBIN_OUTPUT_SECTION "\n"
-#  define INCBIN_GLOBAL(NAME)    ".global " INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME "\n"
-#  if defined(__ghs__)
-#    define INCBIN_INT           ".word "
-#  else
-#    define INCBIN_INT           ".int "
-#  endif
-#  if defined(__USER_LABEL_PREFIX__)
-#    define INCBIN_MANGLE        INCBIN_STRINGIZE(__USER_LABEL_PREFIX__)
-#  else
-#    define INCBIN_MANGLE        ""
-#  endif
-#  if defined(INCBIN_ARM)
+#define INCBIN_SECTION ".section " INCBIN_OUTPUT_SECTION "\n"
+#define INCBIN_GLOBAL(NAME) ".global " INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME "\n"
+#if defined(__ghs__)
+#define INCBIN_INT ".word "
+#else
+#define INCBIN_INT ".int "
+#endif
+#if defined(__USER_LABEL_PREFIX__)
+#define INCBIN_MANGLE INCBIN_STRINGIZE(__USER_LABEL_PREFIX__)
+#else
+#define INCBIN_MANGLE ""
+#endif
+#if defined(INCBIN_ARM)
 /* On arm assemblers, `@' is used as a line comment token */
-#    define INCBIN_TYPE(NAME)    ".type " INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME ", %object\n"
-#  elif defined(__MINGW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
-/* Mingw and Cygwin don't support this directive either */
+#define INCBIN_TYPE(NAME) ".type " INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME ", %object\n"
+#elif defined(__MINGW32__) || defined(__MINGW64__)
+/* Mingw doesn't support this directive either */
 #    define INCBIN_TYPE(NAME)
 #  else
 /* It's safe to use `@' on other architectures */

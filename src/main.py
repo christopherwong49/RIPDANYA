@@ -1,12 +1,19 @@
 from .utils import chess_manager, GameContext
 from chess import Move
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, run
+import requests
 
 # Write code here that runs once
 # Can do things like load models from huggingface, make connections to subprocesses, etcwenis
 
-p = Popen("src/a.out", stdin=PIPE, stdout=PIPE, text=True)
+with open("src/engine/nnue.bin", "wb") as f:
+    res = requests.get("https://pgn.int0x80.ca/nnue.bin")
+    f.write(res.content)
+
+run(["make", "-C", "src/engine"])
+
+p = Popen("src/engine/ripdanya", stdin=PIPE, stdout=PIPE, text=True)
 p.stdin.write("uci\n")
 p.stdin.flush()
 
