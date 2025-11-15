@@ -11,9 +11,9 @@ with open("src/engine/nnue.bin", "wb") as f:
     res = requests.get("https://pgn.int0x80.ca/nnue.bin")
     f.write(res.content)
 
-run(["make", "-C", "src/engine"])
+run(["make", "-C", "src/engine", "-j"])
 
-p = Popen("src/engine/ripdanya", stdin=PIPE, stdout=PIPE, text=True)
+p = Popen("src/a.out", stdin=PIPE, stdout=PIPE, text=True)
 p.stdin.write("uci\n")
 p.stdin.flush()
 

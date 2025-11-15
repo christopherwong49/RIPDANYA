@@ -30,7 +30,7 @@ bool early_exit = false;
 bool can_exit = false;
 
 clock_t start_time;
-clock_t end_time;
+// clock_t end_time;
 uint64_t mx_time;
 
 Value qsearch(Game &g, Value alpha, Value beta) {
@@ -49,10 +49,6 @@ Value qsearch(Game &g, Value alpha, Value beta) {
 
 	rip::vector<Move> moves;
 	board.legal_moves(moves);
-
-	if (moves.empty()) { // stalemate
-		return 0;
-	}
 
 	Value stand_pat = eval(board);
 	if (stand_pat >= beta) {
@@ -104,7 +100,9 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 	}
 
 	Position &board = g.pos();
-	if (board.control(_tzcnt_u64(board.piece_boards[5] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
+
+	bool in_check = board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(board.side)]), !board.side);
+	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
 
 	if (depth <= 0)
@@ -146,6 +144,13 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 		}
 	}
 
+	if (best == -VALUE_MATE) {
+		if (in_check)
+			return -VALUE_MATE + ply;
+		else
+			return 0;
+	}
+
 	if (root)
 		g_best = best_move;
 	return best;
@@ -162,7 +167,7 @@ std::string score_to_string(Value score) {
 }
 
 Move search(Game &g, int time, int depth) {
-	clock_t start_time = clock();
+	start_time = clock();
 	mx_time = time;
 	nodes = 0;
 	can_exit = false;

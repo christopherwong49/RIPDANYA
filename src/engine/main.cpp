@@ -64,7 +64,7 @@ void uci() {
 
 			Move m;
 			if (movetime != -1)
-				m = search(g, movetime / 20, 1e9);
+				m = search(g, movetime, 1e9);
 			else if (g.pos().side == WHITE && wtime != -1)
 				m = search(g, wtime / 20, 1e9);
 			else if (g.pos().side == BLACK && btime != -1)
