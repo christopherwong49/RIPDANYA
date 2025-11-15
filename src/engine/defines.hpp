@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <immintrin.h>
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -86,6 +87,8 @@ constexpr Value BishopValue = 350;
 constexpr Value RookValue = 500;
 constexpr Value QueenValue = 900;
 constexpr Value ScaleValue = (QueenValue + PawnValue - 1) / PawnValue;
+
+constexpr Value PieceValues[] = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, VALUE_INFINITE};
 
 enum PieceType : uint8_t {
 	PAWN,

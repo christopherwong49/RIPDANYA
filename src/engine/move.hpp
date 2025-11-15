@@ -41,6 +41,11 @@ struct Move {
 	constexpr bool operator!=(Move &o) const {
 		return o.data != data;
 	}
+
+	constexpr bool operator<(const Move &o) const {
+		return data > o.data;
+	}
+
 	std::string to_string() const;
 	static Move from_string(const std::string &s, Position &p);
 };

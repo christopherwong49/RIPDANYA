@@ -33,6 +33,15 @@ clock_t start_time;
 // clock_t end_time;
 uint64_t mx_time;
 
+int MVV_LVA[6][6];
+__attribute__((constructor)) void init_mvv_lva() {
+	for (int a = 0; a < 6; a++) {
+		for (int b = 0; b < 6; b++) {
+			MVV_LVA[a][b] = PieceValues[a] * ScaleValue - PieceValues[b];
+		}
+	}
+}
+
 Value qsearch(Game &g, Value alpha, Value beta) {
 	nodes++;
 
@@ -47,9 +56,6 @@ Value qsearch(Game &g, Value alpha, Value beta) {
 	if (board.control(_tzcnt_u64(board.piece_boards[5] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
 
-	rip::vector<Move> moves;
-	board.legal_moves(moves);
-
 	Value stand_pat = eval(board);
 	if (stand_pat >= beta) {
 		return stand_pat;
@@ -58,9 +64,22 @@ Value qsearch(Game &g, Value alpha, Value beta) {
 		alpha = stand_pat;
 	}
 
-	for (Move &mv : moves) {
-		if (board.mailbox[mv.dst()] != NO_PIECE) { // capture
-			g.make_move(mv);
+	rip::vector<Move> moves;
+	rip::vector<std::pair<int, Move>> order;
+	board.legal_moves(moves);
+
+	// MVV-LVA ordering
+	for (Move &m : moves) {
+		if (board.mailbox[m.dst()] != NO_PIECE) {
+			int score = MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7];
+			order.push_back({-score, m});
+		}
+	}
+	std::stable_sort(order.begin(), order.end());
+
+	for (auto &[_, m] : order) {
+		if (board.mailbox[m.dst()] != NO_PIECE) {
+			g.make_move(m);
 			Value score = -qsearch(g, -beta, -alpha);
 			g.unmake_move();
 
@@ -109,14 +128,24 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 		return qsearch(g, alpha, beta);
 
 	rip::vector<Move> moves;
+	rip::vector<std::pair<int, Move>> order;
 	board.legal_moves(moves);
 
-	// order_moves(board, moves, ply);
+	// Move ordering
+	for (Move &m : moves) {
+		int score = 0;
+		if (board.mailbox[m.dst()] != NO_PIECE) {
+			// Captures
+			score += MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7] + 1000000;
+		}
+		order.push_back({-score, m});
+	}
+	std::stable_sort(order.begin(), order.end());
 
 	Value best = -VALUE_INFINITE;
 	Move best_move = NullMove;
 
-	for (Move &mv : moves) {
+	for (auto &[_, mv] : order) {
 		g.make_move(mv);
 		Value score = -negamax(g, depth - 1, ply + 1, -beta, -alpha, false);
 		g.unmake_move();
