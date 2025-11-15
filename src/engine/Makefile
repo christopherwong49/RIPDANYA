@@ -1,4 +1,5 @@
 SRCS := $(shell find . -name '*.cpp')
+HDRS := $(shell find . -name '*.hpp')
 OBJS := $(SRCS:.cpp=.o)
 
 EXE ?= ripdanya
@@ -10,7 +11,7 @@ CXX := g++
 CXXFLAGS := -std=c++20 -m64 -DNNUE_PATH=\"$(EVALFILE)\"
 
 RELEASEFLAGS := -O3 -march=native
-DEBUGFLAGS := -g -O0 -march=x86-64-v3
+DEBUGFLAGS := -g -O0 -march=native
 
 release: CXXFLAGS += $(RELEASEFLAGS)
 release: $(EXE)
@@ -21,7 +22,7 @@ debug: $(EXE)
 $(EXE): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-%.o: %.cpp $(HDRS)
+%.o: %.cpp $(HDRS) Makefile
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:

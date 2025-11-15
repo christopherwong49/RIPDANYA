@@ -18,6 +18,7 @@ void uci() {
 		} else if (input == "isready") {
 			std::cout << "readyok" << std::endl;
 		} else if (input.substr(0, 8) == "position") {
+			g.clear_hist();
 			size_t endpos = input.find("moves");
 			if (input.substr(9, 8) == "startpos") {
 				g.pos().load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -147,7 +148,7 @@ int main(int argc, char *argv[]) {
 		uint64_t total_nodes = 0;
 		for (auto &fen : bench_positions) {
 			Game g(fen);
-			search(g, 1e9, 3);
+			search(g, 1e9, 5);
 
 			total_nodes += nodes;
 		}

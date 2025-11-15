@@ -1,9 +1,9 @@
 #include <cstddef>
 
 namespace rip {
-	template <typename T> class vector {
+	template <typename T, int S = 256> class vector {
 	private:
-		T arr[256];
+		T arr[S];
 		size_t len;
 
 	public:

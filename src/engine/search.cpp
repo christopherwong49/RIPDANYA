@@ -128,6 +128,9 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
 
+	if (!root && g.threefold())
+		return 0;
+
 	if (depth <= 0)
 		return qsearch(g, alpha, beta);
 
