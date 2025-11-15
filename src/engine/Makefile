@@ -1,6 +1,7 @@
 SRCS := $(shell find . -name '*.cpp')
 OBJS := $(SRCS:.cpp=.o)
 
+EXE ?= ripdanya
 EVALFILE ?= nnue.bin
 
 HDRS := $(find . -name '*.hpp')
@@ -12,16 +13,16 @@ RELEASEFLAGS := -O3 -march=native
 DEBUGFLAGS := -g -O0 -march=x86-64-v3
 
 release: CXXFLAGS += $(RELEASEFLAGS)
-release: ripdanya
+release: $(EXE)
 
 debug: CXXFLAGS += $(DEBUGFLAGS)
-debug: ripdanya
+debug: $(EXE)
 
-ripdanya: $(OBJS)
+$(EXE): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 %.o: %.cpp $(HDRS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) ripdanya
+	rm -f $(OBJS) $(EXE)
