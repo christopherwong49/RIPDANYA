@@ -169,8 +169,6 @@ Move search(Game &g, int time, int depth) {
 	early_exit = false;
 	g_best = NullMove;
 
-	g.pos().print_board();
-
 	for (int i = 1; i <= depth; i++) {
 		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true);
 		if (early_exit)

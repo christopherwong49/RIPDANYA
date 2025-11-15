@@ -138,13 +138,13 @@ int main(int argc, char *argv[]) {
 		uint64_t total_nodes = 0;
 		for (auto &fen : bench_positions) {
 			Game g(fen);
-			search(g, 1e9, 4);
+			search(g, 1e9, 3);
 
 			total_nodes += nodes;
 		}
 		clock_t end = clock();
 
-		std::cout << "nodes " << total_nodes << " nps " << int(total_nodes / ((double)(end - start) / CLOCKS_PER_SEC)) << std::endl;
+		std::cout << total_nodes << " nodes " << int(total_nodes / ((double)(end - start) / CLOCKS_PER_SEC)) << " nps" << std::endl;
 
 		return 0;
 	}
