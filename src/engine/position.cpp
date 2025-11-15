@@ -3,14 +3,27 @@
 #include <iostream>
 #include <sstream>
 
-/*
-void set_piece(int square, Piece piece) {
-	if (square < 0 || square > 63)
-		return; // invalid
-	piece_boards[piece] ^= square_bit(square);
-	mailbox[square] = piece;
+uint64_t zobrist_square[64][15];
+uint64_t zobrist_castling[16];
+uint64_t zobrist_ep[8];
+uint64_t zobrist_side;
+
+__attribute__((constructor)) void init_zobrist() {
+	std::srand(0xdeadbeef);
+	for (int sq = 0; sq < 64; sq++) {
+		for (int piece = 0; piece < 15; piece++) {
+			zobrist_square[sq][piece] = ((uint64_t)std::rand() << 32) | std::rand();
+		}
+	}
+
+	for (int i = 0; i < 16; i++)
+		zobrist_castling[i] = ((uint64_t)std::rand() << 32) | std::rand();
+
+	for (int i = 0; i < 8; i++)
+		zobrist_ep[i] = ((uint64_t)std::rand() << 32) | std::rand();
+
+	zobrist_side = ((uint64_t)std::rand() << 32) | std::rand();
 }
-*/
 
 void Position::load_fen(std::string fen) {
 	// clear board
@@ -78,6 +91,18 @@ void Position::load_fen(std::string fen) {
 	}
 }
 
+void Position::checkhash(uint64_t testhash) {
+	uint64_t cur = testhash;
+	recompute_hash();
+	if (cur != zobrist) {
+		std::cout << "Hash mismatch! 1" << std::endl;
+		print_board();
+		std::cout << "Given hash: " << cur << std::endl;
+		std::cout << "Computed hash: " << zobrist << std::endl;
+		exit(1);
+	}
+}
+
 void Position::make_move(Move move) {
 	if (move.data == 0) {
 		side = !side;
@@ -89,7 +114,9 @@ void Position::make_move(Move move) {
 
 	Piece piece = mailbox[from];
 
-	ep_square = 64;
+	if (ep_square != SQ_NONE)
+		zobrist ^= zobrist_ep[ep_square & 7];
+	ep_square = SQ_NONE;
 
 	// capture
 	if (mailbox[to] != NO_PIECE || move.type() == EN_PASSANT) {
@@ -101,6 +128,7 @@ void Position::make_move(Move move) {
 		piece_boards[mailbox[cap] & 7] ^= square_bit(cap); // piece
 		piece_boards[OPPOCC(side)] ^= square_bit(cap); // color: 6 7 6 7
 
+		zobrist ^= zobrist_square[cap][mailbox[cap]];
 		mailbox[cap] = NO_PIECE;
 	}
 
@@ -108,10 +136,17 @@ void Position::make_move(Move move) {
 	piece_boards[piece & 7] ^= square_bit(from); // piece
 	piece_boards[OCC(side)] ^= square_bit(from); // color: 6 7 6 7
 	mailbox[from] = NO_PIECE;
+	zobrist ^= zobrist_square[from][piece];
 
 	// set piece
 	switch (move.type()) {
 	case CASTLING:
+		if (side == WHITE) {
+			zobrist ^= zobrist_square[to][WHITE_KING];
+		} else {
+			zobrist ^= zobrist_square[to][BLACK_KING];
+		}
+
 		if (to == 2) { // to = C1, white queen castle
 			// set piece king (assume UCI)
 			piece_boards[KING] ^= square_bit(to);
@@ -127,6 +162,7 @@ void Position::make_move(Move move) {
 			piece_boards[ROOK] ^= square_bit(3);
 			piece_boards[OCC(WHITE)] ^= square_bit(3);
 			mailbox[3] = WHITE_ROOK;
+			zobrist ^= zobrist_square[0][WHITE_ROOK] ^ zobrist_square[3][WHITE_ROOK];
 		}
 		if (to == 6) { // to = G1, white king castle
 			// set piece king (assume UCI)
@@ -143,6 +179,7 @@ void Position::make_move(Move move) {
 			piece_boards[ROOK] ^= square_bit(5);
 			piece_boards[OCC(WHITE)] ^= square_bit(5);
 			mailbox[5] = WHITE_ROOK;
+			zobrist ^= zobrist_square[7][WHITE_ROOK] ^ zobrist_square[5][WHITE_ROOK];
 		}
 		if (to == 58) { // to = C8, black queen castle
 			// set piece king (assume UCI)
@@ -159,6 +196,7 @@ void Position::make_move(Move move) {
 			piece_boards[ROOK] ^= square_bit(59);
 			piece_boards[OCC(BLACK)] ^= square_bit(59);
 			mailbox[59] = BLACK_ROOK;
+			zobrist ^= zobrist_square[56][BLACK_ROOK] ^ zobrist_square[59][BLACK_ROOK];
 		}
 		if (to == 62) { // to = G8, black king castle
 			// set piece king (assume UCI)
@@ -175,6 +213,7 @@ void Position::make_move(Move move) {
 			piece_boards[ROOK] ^= square_bit(61);
 			piece_boards[OCC(BLACK)] ^= square_bit(61);
 			mailbox[61] = BLACK_ROOK;
+			zobrist ^= zobrist_square[63][BLACK_ROOK] ^ zobrist_square[61][BLACK_ROOK];
 		}
 		break;
 	case PROMOTION:
@@ -182,6 +221,7 @@ void Position::make_move(Move move) {
 		piece_boards[move.promo()] ^= square_bit(to);
 		piece_boards[OCC(side)] ^= square_bit(to);
 		mailbox[to] = Piece(move.promo() | (side << 3));
+		zobrist ^= zobrist_square[to][mailbox[to]];
 		break;
 
 	default:
@@ -192,11 +232,12 @@ void Position::make_move(Move move) {
 		piece_boards[piece & 7] ^= square_bit(to);
 		piece_boards[OCC(side)] ^= square_bit(to);
 		mailbox[to] = piece;
+		zobrist ^= zobrist_square[to][piece];
 		break;
 	}
 
 	// castling
-
+	uint8_t old_castling = castling;
 	if (piece == WHITE_KING)
 		castling &= ~3; // remove white K/Q rights
 	if (piece == BLACK_KING)
@@ -211,8 +252,27 @@ void Position::make_move(Move move) {
 	if (from == 63 || to == 63)
 		castling &= ~8; // H8: remove black k rights
 
+	zobrist ^= zobrist_castling[old_castling] ^ zobrist_castling[castling];
+	if (ep_square != SQ_NONE)
+		zobrist ^= zobrist_ep[ep_square & 7];
+
 	// switch sides
 	side = !side;
+	zobrist ^= zobrist_side;
+
+#ifdef HASHCHECK // trauma :(
+	uint64_t check_hash = zobrist;
+	recompute_hash();
+	if (check_hash != zobrist) {
+		std::cout << "Hash mismatch!" << std::endl;
+		print_board();
+		std::cout << "Move: " << move.to_string() << std::endl;
+		std::cout << "Old hash: " << check_hash << std::endl;
+		std::cout << "New hash: " << zobrist << std::endl;
+		exit(1);
+	}
+
+#endif
 }
 
 void Position::print_board() const {
@@ -224,6 +284,23 @@ void Position::print_board() const {
 		}
 		std::cout << std::endl;
 	}
+}
+
+void Position::recompute_hash() {
+	zobrist = 0;
+	for (int sq = 0; sq < 64; sq++) {
+		Piece piece = mailbox[sq];
+		if (piece != NO_PIECE) {
+			zobrist ^= zobrist_square[sq][piece];
+		}
+	}
+	if (side == BLACK) {
+		zobrist ^= zobrist_side;
+	}
+	if (ep_square != SQ_NONE) {
+		zobrist ^= zobrist_ep[ep_square & 0b111];
+	}
+	zobrist ^= zobrist_castling[castling];
 }
 
 std::string Move::to_string() const {

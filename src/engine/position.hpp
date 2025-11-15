@@ -27,6 +27,7 @@ struct Position {
 
 	Position(std::string fen) {
 		load_fen(fen);
+		recompute_hash();
 	}
 
 	// void set_piece(std::string);
@@ -41,4 +42,6 @@ struct Position {
 	void recompute_hash();
 
 	void print_board() const;
+
+	void checkhash(uint64_t);
 };
