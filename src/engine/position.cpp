@@ -79,6 +79,11 @@ void Position::load_fen(std::string fen) {
 }
 
 void Position::make_move(Move move) {
+	if (move.data == 0) {
+		side = !side;
+		return;
+	}
+
 	int from = move.src();
 	int to = move.dst();
 
@@ -232,7 +237,7 @@ std::string Move::to_string() const {
 	str += ('1' + (dst() >> 3));
 
 	if ((data & 0xc000) == PROMOTION) {
-		str += piece_letter[promo()];
+		str += piecetype_letter[promo()];
 	}
 
 	return str;

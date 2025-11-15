@@ -13,11 +13,8 @@ enum MoveType {
 
 struct Position;
 
-class Move {
-protected:
+struct Move {
 	uint16_t data;
-
-public:
 	Move() : data(0) {}
 	constexpr Move(uint16_t x) : data(x) {}
 	constexpr Move(uint8_t src, uint8_t dst) : data((src << 6) | dst) {}

@@ -33,7 +33,7 @@ struct Position {
 
 	void load_fen(std::string);
 
-	void make_move(Move);
+	void make_move(const Move);
 
 	void legal_moves(rip::vector<Move> &) const;
 	bool control(int, bool) const; // control(square, side): is square controlled by side

@@ -6,7 +6,14 @@
 Value eval(Position &p);
 
 struct Accumulator {
-	int16_t val[1024] = {0};
+	int16_t val[1024];
+};
+
+struct EvalState {
+	Accumulator w_acc, b_acc;
+	Piece mailbox[64];
+
+	EvalState() {}
 };
 
 void accumulator_add(Accumulator &acc, int index);

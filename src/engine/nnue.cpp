@@ -32,6 +32,8 @@ namespace net {
 	static int16_t output_bias[NOUTPUTS];
 };
 
+EvalState states[NINPUTS * 2][NINPUTS * 2];
+
 __attribute__((constructor)) void load_nnue() {
 	size_t offset = 0;
 
@@ -50,6 +52,18 @@ __attribute__((constructor)) void load_nnue() {
 	size = sizeof(net::output_bias);
 	std::memcpy(net::output_bias, gnetwork_weightsData + offset, size);
 	offset += size;
+
+	for (int i = 0; i < NINPUTS * 2; i++) {
+		for (int j = 0; j < NINPUTS * 2; j++) {
+			for (int k = 0; k < HL_SIZE; k++) {
+				states[i][j].w_acc.val[k] = net::accumulator_biases[k];
+				states[i][j].b_acc.val[k] = net::accumulator_biases[k];
+			}
+			for (int k = 0; k < 64; k++) {
+				states[i][j].mailbox[k] = NO_PIECE;
+			}
+		}
+	}
 }
 
 int calculate_index(int sq, PieceType pt, bool side, bool perspective, int nbucket) {
@@ -96,9 +110,6 @@ int32_t nnue_eval(const Accumulator &stm, const Accumulator &ntm, uint8_t nbucke
 	return score;
 }
 
-// Accumulator stm_accs[16 * 16];
-// Accumulator ntm_accs[16 * 16];
-
 // clang-format off
 uint8_t bucket_layout[64] = {
 	0, 2, 4, 6, 7, 5, 3, 1,
@@ -113,35 +124,33 @@ uint8_t bucket_layout[64] = {
 // clang-format on
 
 Value eval(Position &p) {
-	int nbucket = (_mm_popcnt_u64(p.piece_boards[OCC(WHITE)] | p.piece_boards[OCC(BLACK)]) - 2) / 4;
+	int obucket = (_mm_popcnt_u64(p.piece_boards[OCC(WHITE)] | p.piece_boards[OCC(BLACK)]) - 2) / 4;
 
 	int wbucket = bucket_layout[_tzcnt_u64(p.piece_boards[OCC(WHITE)] & p.piece_boards[KING])];
 	int bbucket = bucket_layout[0b111000 ^ _tzcnt_u64(p.piece_boards[OCC(BLACK)] & p.piece_boards[KING])];
 
-	Accumulator w_acc, b_acc;
-
-	for (int i = 0; i < HL_SIZE; i++) {
-		w_acc.val[i] = net::accumulator_biases[i];
-		b_acc.val[i] = net::accumulator_biases[i];
-	}
-
+	EvalState &st = states[wbucket][bbucket];
 	for (int sq = 0; sq < 64; sq++) {
 		Piece piece = p.mailbox[sq];
-		if (piece == NO_PIECE)
+		Piece old_piece = st.mailbox[sq];
+		if (piece == old_piece)
 			continue;
 
-		PieceType pt = PieceType(piece & 7);
-		bool side = piece >> 3;
+		if (old_piece != NO_PIECE) {
+			accumulator_sub(st.w_acc, calculate_index(sq, PieceType(old_piece & 7), old_piece >> 3, WHITE, wbucket));
+			accumulator_sub(st.b_acc, calculate_index(sq, PieceType(old_piece & 7), old_piece >> 3, BLACK, bbucket));
+		}
 
-		int windex = calculate_index(sq, pt, side, WHITE, wbucket);
-		int bindex = calculate_index(sq, pt, side, BLACK, bbucket);
-
-		accumulator_add(w_acc, windex);
-		accumulator_add(b_acc, bindex);
+		if (piece != NO_PIECE) {
+			accumulator_add(st.w_acc, calculate_index(sq, PieceType(piece & 7), piece >> 3, WHITE, wbucket));
+			accumulator_add(st.b_acc, calculate_index(sq, PieceType(piece & 7), piece >> 3, BLACK, bbucket));
+		}
 	}
 
+	memcpy(st.mailbox, p.mailbox, 64 * sizeof(Piece));
+
 	if (p.side == WHITE)
-		return nnue_eval(w_acc, b_acc, nbucket);
+		return nnue_eval(st.w_acc, st.b_acc, obucket);
 	else
-		return nnue_eval(b_acc, w_acc, nbucket);
+		return nnue_eval(st.b_acc, st.w_acc, obucket);
 }

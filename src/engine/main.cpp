@@ -75,6 +75,15 @@ void uci() {
 			std::cout << "bestmove " << m.to_string() << std::endl;
 		} else if (input == "eval") {
 			std::cout << eval(g.pos()) << std::endl;
+		} else if (input == "print") {
+			g.pos().print_board();
+		} else if (input == "moves") {
+			rip::vector<Move> moves;
+			g.pos().legal_moves(moves);
+			for (Move &m : moves) {
+				std::cout << m.to_string() << ' ';
+			}
+			std::cout << std::endl;
 		}
 	}
 }
