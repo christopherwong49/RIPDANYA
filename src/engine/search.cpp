@@ -48,6 +48,7 @@ __attribute__((constructor)) void init_mvv_lva() {
 
 int history[2][64][64];
 int capthist[6][6][64];
+int corrhist[2][32768];
 
 void update_history(bool side, Move m, int bonus) {
 	bonus = std::clamp(bonus, -16384, 16384);
@@ -59,6 +60,25 @@ void update_capthist(PieceType atk, PieceType victim, int dst, int bonus) {
 	bonus = std::clamp(bonus, -16384, 16384);
 	int &val = capthist[atk][victim][dst];
 	val += bonus - val * std::abs(bonus) / 16384;
+}
+
+void update_corrhist(Position &pos, Value diff, int depth) {
+	const int sdiff = diff * 256;
+	const int weight = std::min(16, 1 + depth);
+
+	auto update_entry = [&](int &entry) {
+		int update = entry * (256 - weight) + sdiff * weight;
+		entry = std::clamp(update / 256, -16384, 16384);
+	};
+
+	update_entry(corrhist[pos.side][pos.pawn_hash & 0x7fff]);
+}
+
+void apply_correction(Position &pos, Value &eval) {
+	int corr = 0;
+	corr += corrhist[pos.side][pos.pawn_hash & 0x7fff];
+
+	eval += corr / 256;
 }
 
 SSEntry ss[MAX_PLY];
@@ -87,6 +107,7 @@ Value qsearch(Game &g, Value alpha, Value beta) {
 		return VALUE_MATE;
 
 	Value stand_pat = eval(board);
+	apply_correction(board, stand_pat);
 	if (stand_pat >= beta) {
 		return stand_pat;
 	}
@@ -175,7 +196,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	if (d <= 0)
 		return qsearch(g, alpha, beta);
 
-	Value cur_eval = eval(board);
+	Value raw_eval = eval(board);
+	Value cur_eval = raw_eval;
+	apply_correction(board, cur_eval);
 
 	// RFP
 	if (!pv && !in_check && d <= 8 && cur_eval - params::RFP_MARGIN * d >= beta)
@@ -306,6 +329,10 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			if (root)
 				g_best = best_move;
 
+			if (!in_check && mv.type() != PROMOTION && !capt && best > raw_eval) {
+				update_corrhist(board, best - raw_eval, d);
+			}
+
 			g.ttable.store(board.zobrist, best_move, d, best, LOWER_BOUND);
 			return best;
 		}
@@ -327,6 +354,11 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	if (root)
 		g_best = best_move;
+
+	bool best_iscapture = best_move != NullMove && board.mailbox[best_move.dst()] != NO_PIECE;
+	if (!in_check && !(flag == UPPER_BOUND && best >= raw_eval) && !(best_move != NullMove && (best_iscapture || best_move.type() == PROMOTION))) {
+		update_corrhist(board, best - raw_eval, d);
+	}
 
 	Value ttstore = TTable::mate_to_tt(best, ply);
 	Move ttmove = best_move;
