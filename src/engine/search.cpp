@@ -126,6 +126,18 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	Position &board = g.pos();
 
+	// probe TT
+	if(Entry *entry = board.ttable.probe(key)){
+		if(entry->depth >= depth){
+			int score = entry->score;
+			if(score > VALUE_MATE) score -= ply;
+			if(score < -VALUE_MATE) score += ply;
+			
+			if(entry->flag == exact) return score;
+			if(entry->flag == upper && score <= alpha) return alpha;
+			if(entry->flag == lower && score >= beta) return beta;
+		}
+	}
 	bool in_check = board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(board.side)]), !board.side);
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
@@ -211,6 +223,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		}
 
 		if (score >= beta) {
+			board.ttable.store(board.zobrist, best_move, depth, (board.side == WHITE ? best : -best), lower);
+
 			if (!capt && mv.type() != PROMOTION) {
 				history[board.side][mv.src()][mv.dst()] += d * d;
 
@@ -226,6 +240,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 		i++;
 	}
+
+	board.ttable.store(board.zobrist, best_move, depth, (board.side == WHITE ? best : -best), (best <= alpha ? upper : exact));
 
 	if (best == -VALUE_MATE) {
 		if (in_check)
