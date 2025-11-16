@@ -270,7 +270,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 		if (score >= beta) {
 			if (!capt && mv.type() != PROMOTION) {
-				const int bonus = d * d;
+				const int bonus = 4 * d * d;
 				update_history(board.side, mv, bonus);
 				for (Move &qm : quiets) {
 					update_history(board.side, qm, -bonus);
