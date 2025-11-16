@@ -136,10 +136,11 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	}
 
 	Position &board = g.pos();
+	bool excluded = ss[ply].excluded != NullMove;
 
 	// TT Cutoffs
 	TTEntry *ent = g.ttable.probe(board.zobrist);
-	if (!pv && ent && ent->depth >= d) {
+	if (!pv && ent && ent->depth >= d && !excluded) {
 		Value ttscore = TTable::mate_from_tt(ent->score, ply);
 		if (ent->flag == EXACT)
 			return ttscore;
@@ -169,7 +170,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		return cur_eval;
 
 	// NMP
-	if (!in_check && cur_eval >= beta && (board.piece_boards[KNIGHT] | board.piece_boards[BISHOP] | board.piece_boards[ROOK] | board.piece_boards[QUEEN])) {
+	if (!in_check && !excluded && cur_eval >= beta &&
+		(board.piece_boards[KNIGHT] | board.piece_boards[BISHOP] | board.piece_boards[ROOK] | board.piece_boards[QUEEN])) {
 		int r = params::NMP_R + d / 4 + std::min((cur_eval - beta) / 400, 3);
 
 		g.make_move(NullMove);
@@ -230,7 +232,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		int extension = 0;
 
 		// Singular extensions
-		if (ss[ply].excluded == NullMove && d >= 7 && i == 1 && ent && mv == ent->move && ent->depth >= d - 3 && ent->flag != UPPER_BOUND) {
+		if (!excluded && d >= 7 && i == 1 && ent && mv == ent->move && ent->depth >= d - 3 && ent->flag != UPPER_BOUND) {
 			ss[ply].excluded = mv;
 			Value s_beta = ent->score - 4 * d;
 			Value s_score = negamax(g, (d - 1) / 2, ply, s_beta - 1, s_beta, false, false);
@@ -289,7 +291,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			if (root)
 				g_best = best_move;
 
-			g.ttable.store(board.zobrist, best_move, d, best, LOWER_BOUND);
+			if (!excluded)
+				g.ttable.store(board.zobrist, best_move, d, best, LOWER_BOUND);
 			return best;
 		}
 
@@ -310,7 +313,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	Move ttmove = best_move;
 	if (ttmove == NullMove && ent)
 		ttmove = ent->move;
-	g.ttable.store(board.zobrist, ttmove, d, ttstore, flag);
+	if (!excluded)
+		g.ttable.store(board.zobrist, ttmove, d, ttstore, flag);
 	return best;
 }
 
