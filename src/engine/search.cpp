@@ -268,6 +268,11 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
 
+		if (best > -VALUE_MATE_MAX_PLY) {
+			if (i >= 5 + 2 * d * d)
+				break;
+		}
+
 		g.make_move(mv);
 
 		Value score;
