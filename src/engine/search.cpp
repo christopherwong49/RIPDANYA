@@ -162,7 +162,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	if (d <= 0)
 		return qsearch(g, alpha, beta);
 
-	Value cur_eval = eval(board);
+	Value cur_eval = ent ? ent->s_eval : eval(board);
 
 	// RFP
 	if (!pv && !in_check && d <= 8 && cur_eval - params::RFP_MARGIN * d >= beta)
