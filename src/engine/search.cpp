@@ -268,6 +268,13 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
 
+		if (best > -VALUE_MATE_MAX_PLY) {
+			if (!capt && mv.type() != PROMOTION && !in_check && d <= 5) {
+				if (history[board.side][mv.src()][mv.dst()] < -2000 * d)
+					break;
+			}
+		}
+
 		g.make_move(mv);
 
 		Value score;
