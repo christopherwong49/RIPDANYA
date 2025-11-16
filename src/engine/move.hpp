@@ -36,6 +36,9 @@ struct Move {
 	constexpr bool operator==(Move &o) const {
 		return o.data == data;
 	}
+	constexpr bool operator==(const Move &o) const {
+		return o.data == data;
+	}
 	constexpr bool operator!=(Move &o) const {
 		return o.data != data;
 	}

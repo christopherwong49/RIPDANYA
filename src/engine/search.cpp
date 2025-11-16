@@ -288,7 +288,10 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		g_best = best_move;
 
 	Value ttstore = TTable::mate_to_tt(best, ply);
-	g.ttable.store(board.zobrist, best_move, d, ttstore, flag);
+	Move ttmove = best_move;
+	if (ttmove == NullMove && ent)
+		ttmove = ent->move;
+	g.ttable.store(board.zobrist, ttmove, d, ttstore, flag);
 	return best;
 }
 
