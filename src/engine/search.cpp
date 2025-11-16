@@ -193,6 +193,11 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	rip::vector<std::pair<int, Move>> order;
 	board.legal_moves(moves);
 
+	// Internal iterative reduction
+	if (pv && (!ent || ent->move == NullMove) && d >= 6) {
+		d--;
+	}
+
 	// Move ordering
 	for (Move &m : moves) {
 		constexpr int TT_BASE = 10000000;
