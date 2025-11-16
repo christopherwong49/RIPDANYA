@@ -1,6 +1,8 @@
 #include "search.hpp"
 
+#include "nnue.hpp"
 #include "params.hpp"
+#include "ttable.hpp"
 
 uint64_t perft(Game &g, int d) {
 	Position &p = g.pos();
@@ -126,6 +128,18 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	Position &board = g.pos();
 
+	// TT Cutoffs
+	TTEntry *ent = g.ttable.probe(board.zobrist);
+	// if (!pv && ent && ent->depth >= d) {
+	// 	Value ttscore = TTable::mate_from_tt(ent->score, ply);
+	// 	if (ent->flag == EXACT)
+	// 		return ttscore;
+	// 	if (ent->flag == LOWER_BOUND && ttscore >= beta)
+	// 		return ttscore;
+	// 	if (ent->flag == UPPER_BOUND && ttscore <= alpha)
+	// 		return ttscore;
+	// }
+
 	bool in_check = board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(board.side)]), !board.side);
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
@@ -160,11 +174,14 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	// Move ordering
 	for (Move &m : moves) {
+		constexpr int TT_BASE = 10000000;
 		constexpr int CAPT_BASE = 1000000;
 		constexpr int KILL_BASE = 100000;
 
 		int score = 0;
-		if (board.mailbox[m.dst()] != NO_PIECE) {
+		if (ent && m == ent->move) {
+			score += TT_BASE;
+		} else if (board.mailbox[m.dst()] != NO_PIECE) {
 			// Captures
 			score += MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7] + CAPT_BASE;
 		} else {
@@ -181,7 +198,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	Value best = -VALUE_INFINITE;
 	Move best_move = NullMove;
-
+	TTFlag flag = UPPER_BOUND;
 	int i = 1;
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
@@ -207,6 +224,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			if (score > alpha) {
 				alpha = score;
 				best_move = mv;
+				flag = EXACT;
 			}
 		}
 
@@ -219,8 +237,11 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 					ss[ply].killer0 = mv;
 				}
 			}
+
 			if (root)
 				g_best = best_move;
+
+			g.ttable.store(board.zobrist, best_move, d, best, LOWER_BOUND);
 			return best;
 		}
 
@@ -236,6 +257,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	if (root)
 		g_best = best_move;
+
+	Value ttstore = TTable::mate_to_tt(best, ply);
+	g.ttable.store(board.zobrist, best_move, d, ttstore, flag);
 	return best;
 }
 
