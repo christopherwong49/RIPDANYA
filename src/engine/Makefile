@@ -8,7 +8,7 @@ EVALFILE ?= nnue.bin
 HDRS := $(find . -name '*.hpp')
 
 CXX := g++
-CXXFLAGS := -std=c++20 -m64 -DNNUE_PATH=\"$(EVALFILE)\"
+CXXFLAGS := -std=c++20 -m64 -flto=auto -DNNUE_PATH=\"$(EVALFILE)\"
 
 RELEASEFLAGS := -O3 -march=native
 DEBUGFLAGS := -g -O0 -march=native

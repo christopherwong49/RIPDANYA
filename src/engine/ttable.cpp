@@ -1,7 +1,7 @@
 #include "ttable.hpp"
 
 void TTable::clear() {
-	memset(data, 0, 268435456);
+	memset(data, 0, 268435440);
 }
 
 TTEntry *TTable::probe(uint64_t key) {
