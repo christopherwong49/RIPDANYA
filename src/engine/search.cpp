@@ -57,6 +57,8 @@ int get_conthist(Position &pos, bool side, Move m, int ply) {
 	int score = 0;
 	if (ply >= 1 && ss[ply - 1].cont_hist)
 		score += ss[ply - 1].cont_hist->hist[side][pos.mailbox[m.src()] & 7][m.dst()];
+	if (ply >= 2 && ss[ply - 2].cont_hist)
+		score += ss[ply - 2].cont_hist->hist[side][pos.mailbox[m.src()] & 7][m.dst()];
 	return score;
 }
 
@@ -74,6 +76,10 @@ void update_history(Position &pos, bool side, Move m, int ply, int bonus) {
 	if (ply >= 1 && ss[ply - 1].cont_hist) {
 		int &ch1 = ss[ply - 1].cont_hist->hist[side][pos.mailbox[m.src()] & 7][m.dst()];
 		ch1 += bonus - conthist * std::abs(bonus) / 16384;
+	}
+	if (ply >= 2 && ss[ply - 2].cont_hist) {
+		int &ch2 = ss[ply - 2].cont_hist->hist[side][pos.mailbox[m.src()] & 7][m.dst()];
+		ch2 += bonus - conthist * std::abs(bonus) / 16384;
 	}
 }
 
