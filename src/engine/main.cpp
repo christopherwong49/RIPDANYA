@@ -1,4 +1,5 @@
 #include "defines.hpp"
+#include "nnue.hpp"
 #include "position.hpp"
 #include "search.hpp"
 

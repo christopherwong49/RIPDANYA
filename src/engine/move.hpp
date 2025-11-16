@@ -1,8 +1,6 @@
 #pragma once
-#include "defines.hpp"
-#include "position.hpp"
 
-#include <string>
+#include "defines.hpp"
 
 enum MoveType {
 	NORMAL,

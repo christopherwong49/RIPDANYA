@@ -1,8 +1,8 @@
 #pragma once
 
+#include "defines.hpp"
 #include "game.hpp"
 #include "move.hpp"
-#include "nnue.hpp"
 
 struct SSEntry {
 	Move killer0, killer1;
