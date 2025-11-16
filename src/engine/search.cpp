@@ -227,6 +227,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	Move best_move = NullMove;
 	TTFlag flag = UPPER_BOUND;
 	int i = 1;
+
+	rip::vector<Move> quiets;
+
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
 
@@ -269,6 +272,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			if (!capt && mv.type() != PROMOTION) {
 				const int bonus = d * d;
 				update_history(board.side, mv, bonus);
+				for (Move &qm : quiets) {
+					update_history(board.side, qm, -bonus);
+				}
 
 				if (ss[ply].killer0 != mv && ss[ply].killer1 != mv) {
 					ss[ply].killer1 = ss[ply].killer0;
@@ -284,6 +290,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		}
 
 		i++;
+
+		if (!capt && mv.type() != PROMOTION)
+			quiets.push_back(mv);
 	}
 
 	if (best == -VALUE_MATE) {
