@@ -13,12 +13,12 @@ extern "C" {
 INCBIN(network_weights, NNUE_PATH);
 }
 
-#define HL_SIZE 1024
+#define HL_SIZE 128
 #define QA 255
 #define QB 64
 #define SCALE 400
-#define NINPUTS 16
-#define NOUTPUTS 8
+#define NINPUTS 1
+#define NOUTPUTS 1
 
 // int16_t *accumulator_weights = (int16_t *)gnetwork_weightsData;
 // int16_t *accumulator_biases = accumulator_weights + (768 * NBUCKETS) * (HL_SIZE);
@@ -110,24 +110,11 @@ int32_t nnue_eval(const Accumulator &stm, const Accumulator &ntm, uint8_t nbucke
 	return score;
 }
 
-// clang-format off
-uint8_t bucket_layout[64] = {
-	0, 2, 4, 6, 7, 5, 3, 1,
-	8, 10, 12, 14, 15, 13, 11, 9,
-	16, 16, 18, 18, 19, 19, 17, 17,
-	20, 20, 22, 22, 23, 23, 21, 21,
-	24, 24, 26, 26, 27, 27, 25, 25,
-	24, 24, 26, 26, 27, 27, 25, 25,
-	28, 28, 30, 30, 31, 31, 29, 29,
-	28, 28, 30, 30, 31, 31, 29, 29,
-};
-// clang-format on
-
 Value eval(Position &p) {
-	int obucket = (_mm_popcnt_u64(p.piece_boards[OCC(WHITE)] | p.piece_boards[OCC(BLACK)]) - 2) / 4;
+	int obucket = 0;
 
-	int wbucket = bucket_layout[_tzcnt_u64(p.piece_boards[OCC(WHITE)] & p.piece_boards[KING])];
-	int bbucket = bucket_layout[0b111000 ^ _tzcnt_u64(p.piece_boards[OCC(BLACK)] & p.piece_boards[KING])];
+	int wbucket = 0;
+	int bbucket = 0;
 
 	EvalState &st = states[wbucket][bbucket];
 	for (int sq = 0; sq < 64; sq++) {
