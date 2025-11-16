@@ -152,10 +152,7 @@ int main(int argc, char *argv[]) {
 		Game g(bench_positions[0]);
 		for (auto &fen : bench_positions) {
 			g.pos().load_fen(fen);
-			g.ttable.clear();
-
 			search(g, 1e9, 5);
-
 			total_nodes += nodes;
 		}
 		clock_t end = clock();
