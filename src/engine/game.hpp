@@ -15,7 +15,7 @@ public:
 	void unmake_move();
 	void commit();
 	void clear_hist();
-	bool threefold() const;
+	bool threefold(int ply) const;
 
 	constexpr Position &pos() {
 		return cur_pos;

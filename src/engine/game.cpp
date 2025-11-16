@@ -21,16 +21,19 @@ void Game::clear_hist() {
 	hash_hist.clear();
 }
 
-bool Game::threefold() const {
+bool Game::threefold(int ply) const {
 	if (hash_hist.empty())
 		return false;
-	int count = 0;
+	int count = 0, plies = 0;
 	for (int i = hash_hist.size() - 1; i >= 0; i--) {
 		if (hash_hist[i] == cur_pos.zobrist) {
 			count++;
-			if (count >= 3)
-				return true;
 		}
+		if (plies < ply && count >= 2)
+			return true;
+		plies++;
+		if (count >= 3)
+			return true;
 	}
 	return false;
 }

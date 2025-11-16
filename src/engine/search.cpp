@@ -130,7 +130,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
 
-	if (!root && g.threefold())
+	if (!root && g.threefold(ply))
 		return 0;
 
 	if (d <= 0)
