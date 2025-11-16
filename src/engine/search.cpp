@@ -222,7 +222,24 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	TTFlag flag = UPPER_BOUND;
 	int i = 1;
 	for (auto &[_, mv] : order) {
+		if (mv == ss[ply].excluded)
+			continue;
+
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
+
+		int extension = 0;
+
+		// Singular extensions
+		if (ss[ply].excluded == NullMove && d >= 7 && i == 1 && ent && mv == ent->move && ent->depth >= d - 3 && ent->flag != UPPER_BOUND) {
+			ss[ply].excluded = mv;
+			Value s_beta = ent->score - 4 * d;
+			Value s_score = negamax(g, (d - 1) / 2, ply, s_beta - 1, s_beta, false, false);
+			ss[ply].excluded = NullMove;
+
+			if (s_score < s_beta) {
+				extension = 1;
+			}
+		}
 
 		g.make_move(mv);
 
@@ -230,7 +247,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 		if (d >= 2 && i >= 2 + 2 * pv) {
 			int r = LMR[i][d];
-			int newdepth = d - 1;
+			int newdepth = d - 1 + extension;
 			int lmrdepth = newdepth - r;
 
 			score = -negamax(g, lmrdepth, ply + 1, -alpha - 1, -alpha, false, false);

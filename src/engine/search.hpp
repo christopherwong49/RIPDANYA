@@ -6,6 +6,7 @@
 
 struct SSEntry {
 	Move killer0, killer1;
+	Move excluded;
 };
 
 extern uint64_t nodes;
