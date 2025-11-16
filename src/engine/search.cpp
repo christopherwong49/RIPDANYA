@@ -130,15 +130,15 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	// TT Cutoffs
 	TTEntry *ent = g.ttable.probe(board.zobrist);
-	if (!pv && ent && ent->depth >= d) {
-		Value ttscore = TTable::mate_from_tt(ent->score, ply);
-		if (ent->flag == EXACT)
-			return ttscore;
-		if (ent->flag == LOWER_BOUND && ttscore >= beta)
-			return ttscore;
-		if (ent->flag == UPPER_BOUND && ttscore <= alpha)
-			return ttscore;
-	}
+	// if (!pv && ent && ent->depth >= d) {
+	// 	Value ttscore = TTable::mate_from_tt(ent->score, ply);
+	// 	if (ent->flag == EXACT)
+	// 		return ttscore;
+	// 	if (ent->flag == LOWER_BOUND && ttscore >= beta)
+	// 		return ttscore;
+	// 	if (ent->flag == UPPER_BOUND && ttscore <= alpha)
+	// 		return ttscore;
+	// }
 
 	bool in_check = board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(board.side)]), !board.side);
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
@@ -174,11 +174,14 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	// Move ordering
 	for (Move &m : moves) {
+		constexpr int TT_BASE = 10000000;
 		constexpr int CAPT_BASE = 1000000;
 		constexpr int KILL_BASE = 100000;
 
 		int score = 0;
-		if (board.mailbox[m.dst()] != NO_PIECE) {
+		if (ent && m == ent->move) {
+			score += TT_BASE;
+		} else if (board.mailbox[m.dst()] != NO_PIECE) {
 			// Captures
 			score += MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7] + CAPT_BASE;
 		} else {
