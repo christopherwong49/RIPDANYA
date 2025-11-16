@@ -130,7 +130,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	// TT Cutoffs
 	TTEntry *ent = g.ttable.probe(board.zobrist);
-	if (ent && ent->depth >= d) {
+	if (!pv && ent && ent->depth >= d) {
 		Value ttscore = TTable::mate_from_tt(ent->score, ply);
 		if (ent->flag == EXACT)
 			return ttscore;
@@ -237,7 +237,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 			if (root)
 				g_best = best_move;
-			g.ttable.store(board.zobrist, best_move, d, (board.side == WHITE ? best : -best), LOWER_BOUND);
+
+			g.ttable.store(board.zobrist, best_move, d, best, LOWER_BOUND);
 			return best;
 		}
 
