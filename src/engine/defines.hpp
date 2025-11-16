@@ -3,7 +3,6 @@
 #include "stl/vector.hpp"
 
 #include <cstdint>
-#include <immintrin.h>
 
 #include <algorithm>
 #include <cstring>
@@ -13,7 +12,9 @@
 
 #define MAX_PLY (256)
 
-#ifndef __x86_64__
+#ifdef __x86_64__
+#include <immintrin.h>
+#else
 constexpr uint64_t __bsrq(uint64_t x) {
 	uint64_t pos = 0;
 	while (x >>= 1)
