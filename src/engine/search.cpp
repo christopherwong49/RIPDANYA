@@ -169,9 +169,11 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		return cur_eval;
 
 	// NMP
-	if (!in_check && (board.piece_boards[KNIGHT] | board.piece_boards[BISHOP] | board.piece_boards[ROOK] | board.piece_boards[QUEEN])) {
+	if (!in_check && cur_eval >= beta && (board.piece_boards[KNIGHT] | board.piece_boards[BISHOP] | board.piece_boards[ROOK] | board.piece_boards[QUEEN])) {
+		int r = params::NMP_R + d / 4 + std::min((cur_eval - beta) / 400, 3);
+
 		g.make_move(NullMove);
-		Value score = -negamax(g, d - params::NMP_R, ply + 1, -beta, -beta + 1, false, false);
+		Value score = -negamax(g, d - r, ply + 1, -beta, -beta + 1, false, false);
 		g.unmake_move();
 		if (early_exit)
 			return 0;
