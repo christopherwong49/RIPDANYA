@@ -234,7 +234,7 @@ void Position::unmake_move(){
 		piece_boards[OCC(side)] ^= square_bit(move.src()) | square_bit(move.dst());
 
 		if(last_move.prev_piece != NO_PIECE){
-			piece_boards[last_move.prev_piece] ^= square_bit(move.dst());
+			piece_boards[last_move.prev_piece & 0b111] ^= square_bit(move.dst());
 			piece_boards[OPPOCC(side)] ^= square_bit(move.dst());
 		}
 	} else if(move.type() == EN_PASSANT){
@@ -290,7 +290,6 @@ void Position::unmake_move(){
 
 		mailbox[move.src()] = mailbox[move.dst()];
 		mailbox[move.dst()] = last_move.prev_piece;
-		piece_boards[move.data];
 
 		piece_boards[mailbox[move.dst()] & 0b111] ^= square_bit(move.src()) | square_bit(move.dst());
 		piece_boards[OCC(side)] ^= square_bit(move.src()) | square_bit(move.dst());
