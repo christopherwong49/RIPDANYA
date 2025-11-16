@@ -1,6 +1,8 @@
 #pragma once
 
+#include "defines.hpp"
 #include "position.hpp"
+#include "ttable.hpp"
 
 class Game {
 private:
@@ -9,6 +11,8 @@ private:
 	rip::vector<uint64_t, 1024> hash_hist;
 
 public:
+	TTable ttable;
+
 	Game(std::string fen) : cur_pos(fen) {}
 
 	void make_move(Move m);

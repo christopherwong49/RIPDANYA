@@ -1,30 +1,51 @@
 #pragma once
 
-#include "includes.hpp"
+#include "defines.hpp"
 #include "move.hpp"
 
-#define TTsize 2097152
+#define TTSIZE (268435456 / sizeof(TTEntry))
 
-enum TTflag{
-    upper,
-    lower,
-    exact
+enum TTFlag { NONE, UPPER_BOUND, LOWER_BOUND, EXACT };
+
+struct TTEntry {
+	uint64_t key;
+	Move move;
+	uint16_t depth;
+	Value score;
+	TTFlag flag;
 };
 
-struct Entry{
-    uint64_t ttkey;
-    Move move;
-    uint16_t depth;
-    Value score;
-    TTflag flag;
-}
+class TTable {
+private:
+	TTEntry *data;
 
-class TT{
-    public:
-        void clear();
-        Entry *probe(uint64 key);
-        void store(uint64_t key, Move move, int depth, Value score, TTflag flag);
-    private:
-        std::vector<Entry> table;
-        
-}
+public:
+	TTable() {
+		data = new TTEntry[TTSIZE];
+		clear();
+	}
+	~TTable() {
+		delete[] data;
+	}
+	void operator=(const TTable &other) = delete;
+
+	void clear();
+	TTEntry *probe(uint64_t key);
+	void store(uint64_t key, Move move, int depth, Value score, TTFlag flag);
+
+	static constexpr Value mate_from_tt(Value ttscore, int ply) {
+		if (ttscore <= -VALUE_MATE_MAX_PLY)
+			return ttscore + ply;
+		if (ttscore >= VALUE_MATE_MAX_PLY)
+			return ttscore - ply;
+		return ttscore;
+	}
+
+	static constexpr Value mate_to_tt(Value score, int ply) {
+		if (score <= -VALUE_MATE_MAX_PLY)
+			return score - ply;
+		if (score >= VALUE_MATE_MAX_PLY)
+			return score + ply;
+		return score;
+	}
+};

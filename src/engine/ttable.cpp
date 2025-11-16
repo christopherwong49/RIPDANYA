@@ -1,27 +1,22 @@
 #include "ttable.hpp"
 
-
-void TT::clear(){
-    std::memset(table.data(), 0, table.size() * sizeof(Entry));
-
+void TTable::clear() {
+	memset(data, 0, 268435456);
 }
 
+TTEntry *TTable::probe(uint64_t key) {
+	TTEntry &entry = data[key % TTSIZE];
+	if (entry.key == key)
+		return &entry;
 
-
-Entry* TT::probe(uint64_t key){
-    Entry &entry = table[key%TTsize];
-    if(entry.key == key){
-        return &entry;
-    }
-    return nullptr;
+	return nullptr;
 }
 
-void TT::store(uint64_t key, Move move, int depth, Value score, Flag flag){
-    Entry &entry = table[key%TTsize];
-    entry.key = key;
-    entry.move = move;
-    entry.depth = depth;
-    entry.score = score;
-    entry.flag = flag;
-    
+void TTable::store(uint64_t key, Move move, int depth, Value score, TTFlag flag) {
+	TTEntry &entry = data[key % TTSIZE];
+	entry.key = key;
+	entry.move = move;
+	entry.depth = depth;
+	entry.score = score;
+	entry.flag = flag;
 }
