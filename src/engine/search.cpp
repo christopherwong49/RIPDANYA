@@ -47,10 +47,17 @@ __attribute__((constructor)) void init_mvv_lva() {
 }
 
 int history[2][64][64];
+int capthist[6][6][64];
 
 void update_history(bool side, Move m, int bonus) {
 	bonus = std::clamp(bonus, -16384, 16384);
 	int &val = history[side][m.src()][m.dst()];
+	val += bonus - val * std::abs(bonus) / 16384;
+}
+
+void update_capthist(PieceType atk, PieceType victim, int dst, int bonus) {
+	bonus = std::clamp(bonus, -16384, 16384);
+	int &val = capthist[atk][victim][dst];
 	val += bonus - val * std::abs(bonus) / 16384;
 }
 
@@ -215,7 +222,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			score += TT_BASE;
 		} else if (board.mailbox[m.dst()] != NO_PIECE) {
 			// Captures
-			score += MVV_LVA[board.mailbox[m.dst()] & 7][board.mailbox[m.src()] & 7] + CAPT_BASE;
+			score += PieceValues[board.mailbox[m.dst()] & 7] + capthist[board.mailbox[m.src()] & 7][board.mailbox[m.dst()] & 7][m.dst()] + CAPT_BASE;
 		} else {
 			// History heuristic
 			score += history[board.side][m.src()][m.dst()];
@@ -233,7 +240,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	TTFlag flag = UPPER_BOUND;
 	int i = 1;
 
-	rip::vector<Move> quiets;
+	rip::vector<Move> quiets, captures;
 
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
@@ -274,8 +281,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		}
 
 		if (score >= beta) {
+			const int bonus = 4 * d * d;
 			if (!capt && mv.type() != PROMOTION) {
-				const int bonus = 4 * d * d;
 				update_history(board.side, mv, bonus);
 				for (Move &qm : quiets) {
 					update_history(board.side, qm, -bonus);
@@ -285,6 +292,15 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 					ss[ply].killer1 = ss[ply].killer0;
 					ss[ply].killer0 = mv;
 				}
+			} else if (capt) {
+				PieceType atk = PieceType(board.mailbox[mv.src()] & 7);
+				PieceType victim = PieceType(board.mailbox[mv.dst()] & 7);
+				update_capthist(atk, victim, mv.dst(), bonus);
+			}
+			for (Move &cm : captures) {
+				PieceType atk = PieceType(board.mailbox[cm.src()] & 7);
+				PieceType victim = PieceType(board.mailbox[cm.dst()] & 7);
+				update_capthist(atk, victim, cm.dst(), -bonus);
 			}
 
 			if (root)
@@ -298,6 +314,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 		if (!capt && mv.type() != PROMOTION)
 			quiets.push_back(mv);
+		else if (capt)
+			captures.push_back(mv);
 	}
 
 	if (best == -VALUE_MATE) {
