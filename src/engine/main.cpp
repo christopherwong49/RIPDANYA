@@ -1,4 +1,5 @@
 #include "defines.hpp"
+#include "nnue.hpp"
 #include "position.hpp"
 #include "search.hpp"
 
@@ -85,6 +86,8 @@ void uci() {
 				std::cout << m.to_string() << ' ';
 			}
 			std::cout << std::endl;
+		} else if (input == "ucinewgame") {
+			g.ttable.clear();
 		}
 	}
 }
@@ -146,10 +149,10 @@ int main(int argc, char *argv[]) {
 
 		clock_t start = clock();
 		uint64_t total_nodes = 0;
+		Game g(bench_positions[0]);
 		for (auto &fen : bench_positions) {
-			Game g(fen);
+			g.pos().load_fen(fen);
 			search(g, 1e9, 5);
-
 			total_nodes += nodes;
 		}
 		clock_t end = clock();

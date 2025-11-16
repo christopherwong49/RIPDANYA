@@ -22,7 +22,8 @@ def test_func(ctx: GameContext):
     # This gets called every time the model needs to make a move
     # Return a python-chess Move object that is a legal move for the current position
 
-    p.stdin.write(f"position fen {ctx.board.fen()}\n")
+    moves_str = ' '.join(move.uci() for move in ctx.board.move_stack)
+    p.stdin.write(f"position startpos moves {moves_str}\n")
     p.stdin.write(f"go movetime {ctx.timeLeft / 20}\n")
     p.stdin.flush()
 

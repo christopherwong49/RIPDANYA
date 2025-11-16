@@ -1,4 +1,3 @@
-#include "bitboard.hpp"
 #include "move.hpp"
 #include "position.hpp"
 

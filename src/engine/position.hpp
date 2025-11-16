@@ -4,8 +4,6 @@
 #include "defines.hpp"
 #include "move.hpp"
 
-#include <string>
-
 #define OCC(side) (6 ^ (side))
 #define OPPOCC(side) (7 ^ (side))
 
