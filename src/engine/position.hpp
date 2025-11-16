@@ -19,7 +19,7 @@ struct Position {
 	uint8_t halfmove;
 	uint8_t castling;
 	uint8_t ep_square;
-	uint64_t zobrist;
+	uint64_t zobrist, pawn_hash;
 
 	Position() {}
 
@@ -41,5 +41,5 @@ struct Position {
 
 	void print_board() const;
 
-	void checkhash(uint64_t);
+	void checkhash(uint64_t, uint64_t, int id = 0);
 };

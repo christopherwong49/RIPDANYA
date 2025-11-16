@@ -91,14 +91,26 @@ void Position::load_fen(std::string fen) {
 	}
 }
 
-void Position::checkhash(uint64_t testhash) {
+void Position::checkhash(uint64_t testhash, uint64_t pawnhash, int id) {
 	uint64_t cur = testhash;
+	uint64_t pawncur = pawnhash;
 	recompute_hash();
+	bool bad = false;
 	if (cur != zobrist) {
-		std::cout << "Hash mismatch! 1" << std::endl;
+		std::cout << "Hash mismatch!" << id << std::endl;
 		print_board();
 		std::cout << "Given hash: " << cur << std::endl;
 		std::cout << "Computed hash: " << zobrist << std::endl;
+		bad = true;
+	}
+	if (pawncur != pawn_hash) {
+		std::cout << "Pawn hash mismatch!" << id << std::endl;
+		print_board();
+		std::cout << "Given pawn hash: " << pawncur << std::endl;
+		std::cout << "Computed pawn hash: " << pawn_hash << std::endl;
+		bad = true;
+	}
+	if (bad) {
 		exit(1);
 	}
 }
@@ -130,6 +142,10 @@ void Position::make_move(Move move) {
 		piece_boards[OPPOCC(side)] ^= square_bit(cap); // color: 6 7 6 7
 
 		zobrist ^= zobrist_square[cap][mailbox[cap]];
+
+		if (PieceType(mailbox[cap] & 7) == PAWN)
+			pawn_hash ^= zobrist_square[cap][mailbox[cap]];
+
 		mailbox[cap] = NO_PIECE;
 	}
 
@@ -138,6 +154,8 @@ void Position::make_move(Move move) {
 	piece_boards[OCC(side)] ^= square_bit(from); // color: 6 7 6 7
 	mailbox[from] = NO_PIECE;
 	zobrist ^= zobrist_square[from][piece];
+	if (PieceType(piece & 7) == PAWN)
+		pawn_hash ^= zobrist_square[from][piece];
 
 	// set piece
 	switch (move.type()) {
@@ -234,6 +252,8 @@ void Position::make_move(Move move) {
 		piece_boards[OCC(side)] ^= square_bit(to);
 		mailbox[to] = piece;
 		zobrist ^= zobrist_square[to][piece];
+		if (PieceType(piece & 7) == PAWN)
+			pawn_hash ^= zobrist_square[to][piece];
 		break;
 	}
 
@@ -288,12 +308,15 @@ void Position::print_board() const {
 }
 
 void Position::recompute_hash() {
-	zobrist = 0;
+	zobrist = pawn_hash = 0;
 	for (int sq = 0; sq < 64; sq++) {
 		Piece piece = mailbox[sq];
 		if (piece != NO_PIECE) {
 			zobrist ^= zobrist_square[sq][piece];
 		}
+
+		if (PieceType(piece & 7) == PAWN)
+			pawn_hash ^= zobrist_square[sq][piece];
 	}
 	if (side == BLACK) {
 		zobrist ^= zobrist_side;

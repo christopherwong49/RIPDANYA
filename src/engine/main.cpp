@@ -152,6 +152,7 @@ int main(int argc, char *argv[]) {
 		Game g(bench_positions[0]);
 		for (auto &fen : bench_positions) {
 			g.pos().load_fen(fen);
+			g.pos().recompute_hash();
 			search(g, 1e9, 5);
 			total_nodes += nodes;
 		}
