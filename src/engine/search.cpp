@@ -49,10 +49,32 @@ __attribute__((constructor)) void init_mvv_lva() {
 int history[2][64][64];
 int capthist[6][6][64];
 
-void update_history(bool side, Move m, int bonus) {
+ContHist cont_hist[2][6][64];
+
+SSEntry ss[MAX_PLY];
+
+int get_conthist(Position &pos, bool side, Move m, int ply) {
+	int score = 0;
+	if (ply >= 1 && ss[ply - 1].cont_hist)
+		score += ss[ply - 1].cont_hist->hist[side][pos.mailbox[m.src()] & 7][m.dst()];
+	return score;
+}
+
+int get_history(Position &pos, bool side, Move m, int ply) {
+	int hist = history[side][m.src()][m.dst()];
+	hist += get_conthist(pos, side, m, ply);
+	return hist;
+}
+
+void update_history(Position &pos, bool side, Move m, int ply, int bonus) {
 	bonus = std::clamp(bonus, -16384, 16384);
 	int &val = history[side][m.src()][m.dst()];
 	val += bonus - val * std::abs(bonus) / 16384;
+	int conthist = get_conthist(pos, side, m, ply);
+	if (ply >= 1 && ss[ply - 1].cont_hist) {
+		int &ch1 = ss[ply - 1].cont_hist->hist[side][pos.mailbox[m.src()] & 7][m.dst()];
+		ch1 += bonus - conthist * std::abs(bonus) / 16384;
+	}
 }
 
 void update_capthist(PieceType atk, PieceType victim, int dst, int bonus) {
@@ -60,8 +82,6 @@ void update_capthist(PieceType atk, PieceType victim, int dst, int bonus) {
 	int &val = capthist[atk][victim][dst];
 	val += bonus - val * std::abs(bonus) / 16384;
 }
-
-SSEntry ss[MAX_PLY];
 
 int LMR[256][MAX_PLY];
 __attribute__((constructor)) void init_lmr() {
@@ -225,7 +245,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			score += PieceValues[board.mailbox[m.dst()] & 7] + capthist[board.mailbox[m.src()] & 7][board.mailbox[m.dst()] & 7][m.dst()] + CAPT_BASE;
 		} else {
 			// History heuristic
-			score += history[board.side][m.src()][m.dst()];
+			score += get_history(board, board.side, m, ply);
 
 			// Killer moves
 			if (ss[ply].killer0 == m || ss[ply].killer1 == m)
@@ -244,6 +264,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
+
+		ss[ply].cont_hist = &cont_hist[board.side][board.mailbox[mv.src()] & 7][mv.dst()];
 
 		g.make_move(mv);
 
@@ -268,6 +290,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		}
 
 		g.unmake_move();
+		ss[ply].cont_hist = nullptr;
 		if (early_exit)
 			return 0;
 
@@ -283,9 +306,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		if (score >= beta) {
 			const int bonus = 4 * d * d;
 			if (!capt && mv.type() != PROMOTION) {
-				update_history(board.side, mv, bonus);
+				update_history(board, board.side, mv, ply, bonus);
 				for (Move &qm : quiets) {
-					update_history(board.side, qm, -bonus);
+					update_history(board, board.side, qm, ply, -bonus);
 				}
 
 				if (ss[ply].killer0 != mv && ss[ply].killer1 != mv) {
