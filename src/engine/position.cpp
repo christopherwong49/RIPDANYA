@@ -106,6 +106,7 @@ void Position::checkhash(uint64_t testhash) {
 void Position::make_move(Move move) {
 	if (move.data == 0) {
 		side = !side;
+		zobrist ^= zobrist_side;
 		return;
 	}
 

@@ -142,6 +142,18 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	if (!pv && !in_check && d <= 8 && cur_eval - params::RFP_MARGIN * d >= beta)
 		return cur_eval;
 
+	// NMP
+	if (!in_check && (board.piece_boards[KNIGHT] | board.piece_boards[BISHOP] | board.piece_boards[ROOK] | board.piece_boards[QUEEN])) {
+		g.make_move(NullMove);
+		Value score = -negamax(g, d - params::NMP_R, ply + 1, -beta, -beta + 1, false, false);
+		g.unmake_move();
+		if (early_exit)
+			return 0;
+
+		if (score >= beta)
+			return score;
+	}
+
 	rip::vector<Move> moves;
 	rip::vector<std::pair<int, Move>> order;
 	board.legal_moves(moves);
