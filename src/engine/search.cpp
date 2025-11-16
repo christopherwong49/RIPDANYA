@@ -1,6 +1,8 @@
 #include "search.hpp"
 
-uint64_t perft(Game &g, int depth) {
+#include "params.hpp"
+
+uint64_t perft(Game &g, int d) {
 	Position &p = g.pos();
 
 	if (p.side == WHITE && p.control(_tzcnt_u64(p.piece_boards[KING] & p.piece_boards[OCC(BLACK)]), WHITE))
@@ -8,7 +10,7 @@ uint64_t perft(Game &g, int depth) {
 	if (p.side == BLACK && p.control(_tzcnt_u64(p.piece_boards[KING] & p.piece_boards[OCC(WHITE)]), BLACK))
 		return 0;
 
-	if (depth == 0)
+	if (d == 0)
 		return 1;
 
 	rip::vector<Move> moves;
@@ -17,7 +19,7 @@ uint64_t perft(Game &g, int depth) {
 	uint64_t nodes = 0;
 	for (size_t i = 0; i < moves.size(); i++) {
 		g.make_move(moves[i]);
-		nodes += perft(g, depth - 1);
+		nodes += perft(g, d - 1);
 		g.unmake_move();
 	}
 
@@ -112,7 +114,7 @@ Value qsearch(Game &g, Value alpha, Value beta) {
 	return stand_pat;
 }
 
-Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
+Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool pv) {
 	nodes++;
 
 	if ((nodes & 0xfff) == 0) {
@@ -131,8 +133,14 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 	if (!root && g.threefold())
 		return 0;
 
-	if (depth <= 0)
+	if (d <= 0)
 		return qsearch(g, alpha, beta);
+
+	Value cur_eval = eval(board);
+
+	// RFP
+	if (!pv && !in_check && d <= 8 && cur_eval - params::RFP_MARGIN * d >= beta)
+		return cur_eval;
 
 	rip::vector<Move> moves;
 	rip::vector<std::pair<int, Move>> order;
@@ -166,7 +174,7 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
 
 		g.make_move(mv);
-		Value score = -negamax(g, depth - 1, ply + 1, -beta, -alpha, false);
+		Value score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, false);
 		g.unmake_move();
 		if (early_exit)
 			return 0;
@@ -181,7 +189,7 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 
 		if (score >= beta) {
 			if (!capt && mv.type() != PROMOTION) {
-				history[board.side][mv.src()][mv.dst()] += depth * depth;
+				history[board.side][mv.src()][mv.dst()] += d * d;
 
 				if (ss[ply].killer0 != mv && ss[ply].killer1 != mv) {
 					ss[ply].killer1 = ss[ply].killer0;
@@ -216,7 +224,7 @@ std::string score_to_string(Value score) {
 	}
 }
 
-Move search(Game &g, int time, int depth) {
+Move search(Game &g, int time, int d) {
 	start_time = clock();
 	mx_time = time;
 	nodes = 0;
@@ -227,8 +235,8 @@ Move search(Game &g, int time, int depth) {
 	memset(history, 0, sizeof(history));
 	memset(ss, 0, sizeof(ss));
 
-	for (int i = 1; i <= depth; i++) {
-		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true);
+	for (int i = 1; i <= d; i++) {
+		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true, false);
 		if (early_exit)
 			break;
 		std::cout << "info depth " << i << " score " << score_to_string(score) << " nodes " << nodes << " pv " << g_best.to_string() << std::endl;
