@@ -86,6 +86,8 @@ void uci() {
 				std::cout << m.to_string() << ' ';
 			}
 			std::cout << std::endl;
+		} else if (input == "ucinewgame") {
+			g.ttable.clear();
 		}
 	}
 }
