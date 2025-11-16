@@ -4,8 +4,8 @@
 
 class Game {
 private:
-	rip::vector<Position> hist;
 	Position cur_pos;
+	rip::vector<Position, 512> hist;
 	rip::vector<uint64_t, 1024> hash_hist;
 
 public:
