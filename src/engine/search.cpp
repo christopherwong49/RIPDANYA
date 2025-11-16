@@ -272,7 +272,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			if (root)
 				g_best = best_move;
 
-			g.ttable.store(board.zobrist, best_move, d, best, LOWER_BOUND);
+			g.ttable.store(board.zobrist, best_move, d, best, cur_eval, LOWER_BOUND);
 			return best;
 		}
 
@@ -293,7 +293,7 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	Move ttmove = best_move;
 	if (ttmove == NullMove && ent)
 		ttmove = ent->move;
-	g.ttable.store(board.zobrist, ttmove, d, ttstore, flag);
+	g.ttable.store(board.zobrist, ttmove, d, ttstore, cur_eval, flag);
 	return best;
 }
 

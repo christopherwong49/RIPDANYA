@@ -12,11 +12,12 @@ TTEntry *TTable::probe(uint64_t key) {
 	return nullptr;
 }
 
-void TTable::store(uint64_t key, Move move, int depth, Value score, TTFlag flag) {
+void TTable::store(uint64_t key, Move move, int depth, Value score, Value s_eval, TTFlag flag) {
 	TTEntry &entry = data[key % TTSIZE];
 	entry.key = key;
 	entry.move = move;
 	entry.depth = depth;
 	entry.score = score;
+	entry.s_eval = s_eval;
 	entry.flag = flag;
 }

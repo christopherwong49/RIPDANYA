@@ -11,7 +11,7 @@ struct TTEntry {
 	uint64_t key;
 	Move move;
 	uint16_t depth;
-	Value score;
+	Value score, s_eval;
 	TTFlag flag;
 };
 
@@ -31,7 +31,7 @@ public:
 
 	void clear();
 	TTEntry *probe(uint64_t key);
-	void store(uint64_t key, Move move, int depth, Value score, TTFlag flag);
+	void store(uint64_t key, Move move, int depth, Value score, Value s_eval, TTFlag flag);
 
 	static constexpr Value mate_from_tt(Value ttscore, int ply) {
 		if (ttscore <= -VALUE_MATE_MAX_PLY)
