@@ -3,7 +3,7 @@
 #include "bitboard.hpp"
 #include "defines.hpp"
 #include "move.hpp"
-
+#include "ttable.hpp"
 #include <string>
 
 #define OCC(side) (6 ^ (side))
@@ -22,6 +22,8 @@ struct Position {
 	uint8_t castling;
 	uint8_t ep_square;
 	uint64_t zobrist;
+
+	TT ttable;
 
 	Position() {}
 
