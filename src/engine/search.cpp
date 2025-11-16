@@ -49,6 +49,7 @@ __attribute__((constructor)) void init_mvv_lva() {
 int history[2][64][64];
 int capthist[6][6][64];
 int corrhist[2][32768];
+int np_corrhist[2][2][32768];
 
 void update_history(bool side, Move m, int bonus) {
 	bonus = std::clamp(bonus, -16384, 16384);
@@ -72,11 +73,15 @@ void update_corrhist(Position &pos, Value diff, int depth) {
 	};
 
 	update_entry(corrhist[pos.side][pos.pawn_hash & 0x7fff]);
+	update_entry(np_corrhist[WHITE][pos.side][pos.np_hash[WHITE] & 0x7fff]);
+	update_entry(np_corrhist[BLACK][pos.side][pos.np_hash[BLACK] & 0x7fff]);
 }
 
 void apply_correction(Position &pos, Value &eval) {
 	int corr = 0;
 	corr += corrhist[pos.side][pos.pawn_hash & 0x7fff];
+	corr += np_corrhist[WHITE][pos.side][pos.np_hash[WHITE] & 0x7fff];
+	corr += np_corrhist[BLACK][pos.side][pos.np_hash[BLACK] & 0x7fff];
 
 	eval += corr / 256;
 }

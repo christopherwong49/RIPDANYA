@@ -91,9 +91,10 @@ void Position::load_fen(std::string fen) {
 	}
 }
 
-void Position::checkhash(uint64_t testhash, uint64_t pawnhash, int id) {
-	uint64_t cur = testhash;
-	uint64_t pawncur = pawnhash;
+void Position::checkhash(int id) {
+	uint64_t cur = zobrist;
+	uint64_t pawncur = pawn_hash;
+	uint64_t npcur[2] = {np_hash[0], np_hash[1]};
 	recompute_hash();
 	bool bad = false;
 	if (cur != zobrist) {
@@ -108,6 +109,20 @@ void Position::checkhash(uint64_t testhash, uint64_t pawnhash, int id) {
 		print_board();
 		std::cout << "Given pawn hash: " << pawncur << std::endl;
 		std::cout << "Computed pawn hash: " << pawn_hash << std::endl;
+		bad = true;
+	}
+	if (np_hash[0] != npcur[0]) {
+		std::cout << "NP hash mismatch for WHITE!" << id << std::endl;
+		print_board();
+		std::cout << "Given NP hash: " << npcur[0] << std::endl;
+		std::cout << "Computed NP hash: " << np_hash[0] << std::endl;
+		bad = true;
+	}
+	if (np_hash[1] != npcur[1]) {
+		std::cout << "NP hash mismatch for BLACK!" << id << std::endl;
+		print_board();
+		std::cout << "Given NP hash: " << npcur[1] << std::endl;
+		std::cout << "Computed NP hash: " << np_hash[1] << std::endl;
 		bad = true;
 	}
 	if (bad) {
@@ -145,6 +160,8 @@ void Position::make_move(Move move) {
 
 		if (PieceType(mailbox[cap] & 7) == PAWN)
 			pawn_hash ^= zobrist_square[cap][mailbox[cap]];
+		else
+			np_hash[!side] ^= zobrist_square[cap][mailbox[cap]];
 
 		mailbox[cap] = NO_PIECE;
 	}
@@ -156,14 +173,18 @@ void Position::make_move(Move move) {
 	zobrist ^= zobrist_square[from][piece];
 	if (PieceType(piece & 7) == PAWN)
 		pawn_hash ^= zobrist_square[from][piece];
+	else
+		np_hash[side] ^= zobrist_square[from][piece];
 
 	// set piece
 	switch (move.type()) {
 	case CASTLING:
 		if (side == WHITE) {
 			zobrist ^= zobrist_square[to][WHITE_KING];
+			np_hash[WHITE] ^= zobrist_square[to][WHITE_KING];
 		} else {
 			zobrist ^= zobrist_square[to][BLACK_KING];
+			np_hash[BLACK] ^= zobrist_square[to][BLACK_KING];
 		}
 
 		if (to == 2) { // to = C1, white queen castle
@@ -182,6 +203,7 @@ void Position::make_move(Move move) {
 			piece_boards[OCC(WHITE)] ^= square_bit(3);
 			mailbox[3] = WHITE_ROOK;
 			zobrist ^= zobrist_square[0][WHITE_ROOK] ^ zobrist_square[3][WHITE_ROOK];
+			np_hash[WHITE] ^= zobrist_square[0][WHITE_ROOK] ^ zobrist_square[3][WHITE_ROOK];
 		}
 		if (to == 6) { // to = G1, white king castle
 			// set piece king (assume UCI)
@@ -199,6 +221,7 @@ void Position::make_move(Move move) {
 			piece_boards[OCC(WHITE)] ^= square_bit(5);
 			mailbox[5] = WHITE_ROOK;
 			zobrist ^= zobrist_square[7][WHITE_ROOK] ^ zobrist_square[5][WHITE_ROOK];
+			np_hash[WHITE] ^= zobrist_square[7][WHITE_ROOK] ^ zobrist_square[5][WHITE_ROOK];
 		}
 		if (to == 58) { // to = C8, black queen castle
 			// set piece king (assume UCI)
@@ -216,6 +239,7 @@ void Position::make_move(Move move) {
 			piece_boards[OCC(BLACK)] ^= square_bit(59);
 			mailbox[59] = BLACK_ROOK;
 			zobrist ^= zobrist_square[56][BLACK_ROOK] ^ zobrist_square[59][BLACK_ROOK];
+			np_hash[BLACK] ^= zobrist_square[56][BLACK_ROOK] ^ zobrist_square[59][BLACK_ROOK];
 		}
 		if (to == 62) { // to = G8, black king castle
 			// set piece king (assume UCI)
@@ -233,6 +257,7 @@ void Position::make_move(Move move) {
 			piece_boards[OCC(BLACK)] ^= square_bit(61);
 			mailbox[61] = BLACK_ROOK;
 			zobrist ^= zobrist_square[63][BLACK_ROOK] ^ zobrist_square[61][BLACK_ROOK];
+			np_hash[BLACK] ^= zobrist_square[63][BLACK_ROOK] ^ zobrist_square[61][BLACK_ROOK];
 		}
 		break;
 	case PROMOTION:
@@ -241,6 +266,7 @@ void Position::make_move(Move move) {
 		piece_boards[OCC(side)] ^= square_bit(to);
 		mailbox[to] = Piece(move.promo() | (side << 3));
 		zobrist ^= zobrist_square[to][mailbox[to]];
+		np_hash[side] ^= zobrist_square[to][mailbox[to]];
 		break;
 
 	default:
@@ -254,6 +280,8 @@ void Position::make_move(Move move) {
 		zobrist ^= zobrist_square[to][piece];
 		if (PieceType(piece & 7) == PAWN)
 			pawn_hash ^= zobrist_square[to][piece];
+		else
+			np_hash[side] ^= zobrist_square[to][piece];
 		break;
 	}
 
@@ -308,7 +336,7 @@ void Position::print_board() const {
 }
 
 void Position::recompute_hash() {
-	zobrist = pawn_hash = 0;
+	zobrist = pawn_hash = np_hash[WHITE] = np_hash[BLACK] = 0;
 	for (int sq = 0; sq < 64; sq++) {
 		Piece piece = mailbox[sq];
 		if (piece != NO_PIECE) {
@@ -317,6 +345,12 @@ void Position::recompute_hash() {
 
 		if (PieceType(piece & 7) == PAWN)
 			pawn_hash ^= zobrist_square[sq][piece];
+		else if (piece != NO_PIECE) {
+			if ((piece >> 3) == WHITE)
+				np_hash[WHITE] ^= zobrist_square[sq][piece];
+			else if ((piece >> 3) == BLACK)
+				np_hash[BLACK] ^= zobrist_square[sq][piece];
+		}
 	}
 	if (side == BLACK) {
 		zobrist ^= zobrist_side;
