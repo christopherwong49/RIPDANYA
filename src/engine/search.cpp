@@ -177,6 +177,13 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 			return score;
 	}
 
+	// Razoring
+	if (!pv && !in_check && d <= 8 && cur_eval + params::RAZOR_MARGIN * d < alpha) {
+		Value score = qsearch(g, alpha, alpha + 1);
+		if (score <= alpha)
+			return score;
+	}
+
 	rip::vector<Move> moves;
 	rip::vector<std::pair<int, Move>> order;
 	board.legal_moves(moves);
