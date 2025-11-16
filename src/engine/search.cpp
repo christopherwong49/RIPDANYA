@@ -50,6 +50,15 @@ int history[2][64][64];
 
 SSEntry ss[MAX_PLY];
 
+int LMR[256][MAX_PLY];
+__attribute__((constructor)) void init_lmr() {
+	for (int i = 1; i < 256; i++) {
+		for (int d = 0; d < MAX_PLY; d++) {
+			LMR[i][d] = 0.77 + log(i) * log(d) / 2.36;
+		}
+	}
+}
+
 Value qsearch(Game &g, Value alpha, Value beta) {
 	nodes++;
 
@@ -206,13 +215,23 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		g.make_move(mv);
 
 		Value score;
-		if (i == 1) {
-			score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, pv);
-		} else {
-			score = -negamax(g, d - 1, ply + 1, -alpha - 1, -alpha, false, false);
-			if (score > alpha && score < beta) {
-				score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, pv);
+
+		if (d >= 2 && i >= 2 + 2 * pv) {
+			int r = LMR[i][d];
+			int newdepth = d - 1;
+			int lmrdepth = newdepth - r;
+
+			score = -negamax(g, lmrdepth, ply + 1, -alpha - 1, -alpha, false, false);
+			if (score > alpha && lmrdepth < newdepth) {
+				score = -negamax(g, newdepth, ply + 1, -alpha - 1, -alpha, false, false);
 			}
+		} else if (!pv || i > 1) {
+			// Standard null window
+			score = -negamax(g, d - 1, ply + 1, -alpha - 1, -alpha, false, false);
+		}
+		if (pv && (i == 1 || score > alpha)) {
+			// Full depth + window
+			score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, true);
 		}
 
 		g.unmake_move();
