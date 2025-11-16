@@ -15,13 +15,6 @@ TTEntry *TTable::probe(uint64_t key) {
 }
 
 void TTable::store(uint64_t key, Move move, int depth, Value score, TTFlag flag) {
-	// TTEntry &entry = data[key % TTSIZE];
-	// entry.key = key;
-	// entry.move = move;
-	// entry.depth = depth;
-	// entry.score = score;
-	// entry.flag = flag;
-
 	TTEntry &always = data[key % TTSIZE].entries[0];
 	TTEntry &d = data[key % TTSIZE].entries[1];
 
