@@ -163,9 +163,15 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 		return qsearch(g, alpha, beta);
 
 	Value cur_eval = eval(board);
+	ss[ply].score = cur_eval;
+
+	bool improving = false;
+
+	if (!in_check && ply >= 2 && ss[ply - 2].score != 0 && cur_eval > ss[ply - 2].score)
+		improving = true;
 
 	// RFP
-	if (!pv && !in_check && d <= 8 && cur_eval - params::RFP_MARGIN * d >= beta)
+	if (!pv && !in_check && d <= 8 && cur_eval - (params::RFP_MARGIN - params::RFP_IMPROVING) * d >= beta)
 		return cur_eval;
 
 	// NMP
