@@ -3,11 +3,12 @@
 #include "stl/vector.hpp"
 
 #include <cstdint>
-#include <immintrin.h>
 
 #include <iostream>
 #include <sstream>
 #include <string>
+
+#include <stack>
 
 #define MAX_PLY (256)
 

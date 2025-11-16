@@ -23,6 +23,8 @@ struct Position {
 	uint8_t ep_square;
 	uint64_t zobrist;
 
+	std::stack<HistoryEntry> move_hist;
+
 	Position() {}
 
 	Position(std::string fen) {
@@ -35,10 +37,28 @@ struct Position {
 
 	void make_move(const Move);
 
+	void unmake_move();
+
 	void legal_moves(rip::vector<Move> &) const;
 	bool control(int, bool) const; // control(square, side): is square controlled by side
 
 	void recompute_hash();
 
 	void print_board() const;
+};
+
+struct HistoryEntry {
+	Move move;
+	Piece prev_piece;
+	uint8_t prev_cas;
+	uint8_t prev_ep;
+	uint8_t halfmove;
+
+	HistoryEntry(Move move, Piece prev_piece, u_int8_t prev_cas, u_int8_t prev_ep, uint8_t halfmove){
+		move = move;
+		prev_piece = prev_piece;
+		prev_cas = prev_cas;
+		prev_ep = prev_ep;
+		halfmove = halfmove;
+	}
 };

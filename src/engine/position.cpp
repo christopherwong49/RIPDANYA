@@ -84,6 +84,10 @@ void Position::make_move(Move move) {
 		return;
 	}
 
+	//Add move to history
+	move_hist.push(HistoryEntry(move, mailbox[move.dst()], castling, ep_square, halfmove));
+
+
 	int from = move.src();
 	int to = move.dst();
 
@@ -213,6 +217,92 @@ void Position::make_move(Move move) {
 
 	// switch sides
 	side = !side;
+}
+
+void Position::unmake_move(){
+
+	side = !side;
+
+	HistoryEntry last_move = move_hist.top();
+	move_hist.pop();
+	Move move = last_move.move;
+
+	if(move.type() == PROMOTION){
+		mailbox[move.src()] = Piece(PAWN | side << 3);
+		mailbox[move.dst()] = last_move.prev_piece;
+		piece_boards[PAWN] ^= square_bit(move.src());
+		piece_boards[OCC(side)] ^= square_bit(move.src()) | square_bit(move.dst());
+
+		if(last_move.prev_piece != NO_PIECE){
+			piece_boards[last_move.prev_piece] ^= square_bit(move.dst());
+			piece_boards[OPPOCC(side)] ^= square_bit(move.dst());
+		}
+	} else if(move.type() == EN_PASSANT){
+		mailbox[move.src()] = Piece(PAWN | side << 3);
+		mailbox[move.dst()] = NO_PIECE;
+		mailbox[(move.src() & 0b111000) | move.dst() & 0b111] = Piece(mailbox[move.src()] ^ 8);
+		piece_boards[PAWN] ^= square_bit(move.src()) | square_bit(move.dst()) | square_bit((move.src() & 0b111000) | (move.dst() & 0b111));
+		piece_boards[OCC(side)] ^= square_bit(move.src()) | square_bit(move.dst());
+		piece_boards[OPPOCC(side)] ^= square_bit((move.src() & 0b111000) | (move.dst() & 0b111));
+	} else if(move.type() == CASTLING){
+		if (move.dst() == 2) { // move.dst() = C1, white queen castle
+			mailbox[move.dst()] = NO_PIECE;
+			mailbox[move.src()] = WHITE_KING;
+			mailbox[0] = WHITE_ROOK;
+			mailbox[3] = NO_PIECE;
+
+			piece_boards[KING] ^= square_bit(move.dst()) | square_bit(move.src());
+			piece_boards[ROOK] ^= square_bit(0) | square_bit(3);
+			piece_boards[OCC(WHITE)] ^= square_bit(move.dst()) | square_bit(move.src()) | square_bit(0) | square_bit(3);
+		}
+		if (move.dst() == 6) { // move.dst() = G1, white king castle
+			mailbox[move.dst()] = NO_PIECE;
+			mailbox[move.src()] = WHITE_KING;
+			mailbox[7] = WHITE_ROOK;
+			mailbox[5] = NO_PIECE;
+
+			piece_boards[KING] ^= square_bit(move.dst()) | square_bit(move.src());
+			piece_boards[ROOK] ^= square_bit(7) | square_bit(5);
+			piece_boards[OCC(WHITE)] ^= square_bit(move.dst()) | square_bit(move.src()) | square_bit(7) | square_bit(5);
+		}
+		if (move.dst() == 58) { // move.dst() = C8, black queen castle
+			mailbox[move.dst()] = NO_PIECE;
+			mailbox[move.src()] = BLACK_KING;
+			mailbox[56] = BLACK_ROOK;
+			mailbox[59] = NO_PIECE;
+
+			piece_boards[KING] ^= square_bit(move.dst()) | square_bit(move.src());
+			piece_boards[ROOK] ^= square_bit(56) | square_bit(59);
+			piece_boards[OCC(BLACK)] ^= square_bit(move.dst()) | square_bit(move.src()) | square_bit(56) | square_bit(59);
+		}
+		if (move.dst() == 62) { // move.dst() = G8, black king castle
+			mailbox[move.dst()] = NO_PIECE;
+			mailbox[move.src()] = BLACK_KING;
+			mailbox[63] = BLACK_ROOK;
+			mailbox[61] = NO_PIECE;
+
+			piece_boards[KING] ^= square_bit(move.dst()) | square_bit(move.src());
+			piece_boards[ROOK] ^= square_bit(63) | square_bit(61);
+			piece_boards[OCC(BLACK)] ^= square_bit(move.dst()) | square_bit(move.src()) | square_bit(63) | square_bit(61);
+		}
+	} else {
+		uint8_t piece = mailbox[move.dst()]; //do I need to and with 0b111?
+
+		mailbox[move.src()] = mailbox[move.dst()];
+		mailbox[move.dst()] = last_move.prev_piece;
+		piece_boards[move.data];
+
+		piece_boards[mailbox[move.dst()] & 0b111] ^= square_bit(move.src()) | square_bit(move.dst());
+		piece_boards[OCC(side)] ^= square_bit(move.src()) | square_bit(move.dst());
+		
+		if(last_move.prev_piece != NO_PIECE){
+			piece_boards[last_move.prev_piece & 0b111] ^= square_bit(move.dst());
+			piece_boards[OPPOCC(side)] ^= square_bit(move.dst());
+		}
+	}
+
+
+
 }
 
 void Position::print_board() const {
