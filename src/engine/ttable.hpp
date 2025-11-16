@@ -3,7 +3,7 @@
 #include "defines.hpp"
 #include "move.hpp"
 
-#define TTSIZE (268435456 / sizeof(TTEntry))
+#define TTSIZE (268435456 / sizeof(TTBucket))
 
 enum TTFlag { NONE, UPPER_BOUND, LOWER_BOUND, EXACT };
 
@@ -15,13 +15,17 @@ struct TTEntry {
 	TTFlag flag;
 };
 
+struct TTBucket {
+	TTEntry entries[2];
+};
+
 class TTable {
 private:
-	TTEntry *data;
+	TTBucket *data;
 
 public:
 	TTable() {
-		data = new TTEntry[TTSIZE];
+		data = new TTBucket[TTSIZE];
 		clear();
 	}
 	~TTable() {
