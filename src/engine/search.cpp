@@ -306,12 +306,41 @@ Move search(Game &g, int time, int d) {
 	memset(history, 0, sizeof(history));
 	memset(ss, 0, sizeof(ss));
 
+	Value prev_eval = -VALUE_INFINITE;
+
 	for (int i = 1; i <= d; i++) {
-		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true, true);
+		Value window_sz = params::ASP_WINDOW;
+		Value alpha = -VALUE_INFINITE, beta = VALUE_INFINITE;
+		if (prev_eval != -VALUE_INFINITE) {
+			alpha = prev_eval - window_sz;
+			beta = prev_eval + window_sz;
+		}
+
+		Value score = -VALUE_INFINITE;
+		bool failed_window = false;
+
+		do {
+			score = negamax(g, i, 0, alpha, beta, true, true);
+			if (early_exit)
+				break;
+			failed_window = score <= alpha || score >= beta;
+			if (score <= alpha) {
+				alpha -= window_sz;
+				if (alpha <= -VALUE_INFINITE / 4)
+					alpha = -VALUE_INFINITE;
+			} else if (score >= beta) {
+				beta += window_sz;
+				if (beta >= VALUE_INFINITE / 4)
+					beta = VALUE_INFINITE;
+			}
+			window_sz *= 2;
+		} while (failed_window);
+
 		if (early_exit)
 			break;
 		std::cout << "info depth " << i << " score " << score_to_string(score) << " nodes " << nodes << " pv " << g_best.to_string() << std::endl;
 		can_exit = true;
+		prev_eval = score;
 	}
 
 	return g_best;
