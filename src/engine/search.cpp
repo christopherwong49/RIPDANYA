@@ -48,6 +48,12 @@ __attribute__((constructor)) void init_mvv_lva() {
 
 int history[2][64][64];
 
+void update_history(bool side, Move m, int bonus) {
+	bonus = std::clamp(bonus, -16384, 16384);
+	int &val = history[side][m.src()][m.dst()];
+	val += bonus - val * std::abs(bonus) / 16384;
+}
+
 SSEntry ss[MAX_PLY];
 
 int LMR[256][MAX_PLY];
@@ -261,7 +267,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 		if (score >= beta) {
 			if (!capt && mv.type() != PROMOTION) {
-				history[board.side][mv.src()][mv.dst()] += d * d;
+				const int bonus = d * d;
+				update_history(board.side, mv, bonus);
 
 				if (ss[ply].killer0 != mv && ss[ply].killer1 != mv) {
 					ss[ply].killer1 = ss[ply].killer0;
@@ -315,7 +322,6 @@ Move search(Game &g, int time, int d) {
 	early_exit = false;
 	g_best = NullMove;
 
-	memset(history, 0, sizeof(history));
 	memset(ss, 0, sizeof(ss));
 
 	for (int i = 1; i <= d; i++) {
