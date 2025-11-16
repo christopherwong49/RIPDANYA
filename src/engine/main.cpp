@@ -149,8 +149,11 @@ int main(int argc, char *argv[]) {
 
 		clock_t start = clock();
 		uint64_t total_nodes = 0;
+		Game g(bench_positions[0]);
 		for (auto &fen : bench_positions) {
-			Game g(fen);
+			g.pos().load_fen(fen);
+			g.ttable.clear();
+
 			search(g, 1e9, 5);
 
 			total_nodes += nodes;
