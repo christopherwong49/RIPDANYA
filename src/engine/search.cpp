@@ -156,6 +156,9 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	if (!root && g.threefold())
 		return 0;
 
+	if (in_check)
+		d += params::CHECK_EXT;
+
 	if (d <= 0)
 		return qsearch(g, alpha, beta);
 
