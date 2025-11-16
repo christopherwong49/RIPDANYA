@@ -53,7 +53,7 @@ SSEntry ss[MAX_PLY];
 int LMR[256][MAX_PLY];
 __attribute__((constructor)) void init_lmr() {
 	for (int i = 1; i < 256; i++) {
-		for (int d = 0; d < MAX_PLY; d++) {
+		for (int d = 1; d < MAX_PLY; d++) {
 			LMR[i][d] = 0.77 + log(i) * log(d) / 2.36;
 		}
 	}
@@ -139,15 +139,15 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 
 	// TT Cutoffs
 	TTEntry *ent = g.ttable.probe(board.zobrist);
-	// if (!pv && ent && ent->depth >= d) {
-	// 	Value ttscore = TTable::mate_from_tt(ent->score, ply);
-	// 	if (ent->flag == EXACT)
-	// 		return ttscore;
-	// 	if (ent->flag == LOWER_BOUND && ttscore >= beta)
-	// 		return ttscore;
-	// 	if (ent->flag == UPPER_BOUND && ttscore <= alpha)
-	// 		return ttscore;
-	// }
+	if (!pv && ent && ent->depth >= d) {
+		Value ttscore = TTable::mate_from_tt(ent->score, ply);
+		if (ent->flag == EXACT)
+			return ttscore;
+		if (ent->flag == LOWER_BOUND && ttscore >= beta)
+			return ttscore;
+		if (ent->flag == UPPER_BOUND && ttscore <= alpha)
+			return ttscore;
+	}
 
 	bool in_check = board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(board.side)]), !board.side);
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
