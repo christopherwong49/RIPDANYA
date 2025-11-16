@@ -138,8 +138,20 @@ Value negamax(Game &g, int depth, int ply, Value alpha, Value beta, bool root) {
 	if (board.control(_tzcnt_u64(board.piece_boards[KING] & board.piece_boards[OCC(!board.side)]), board.side)) // checkmate, we won
 		return VALUE_MATE;
 
+	// check extension
+	if(in_check) depth++; 
+
 	if (depth <= 0)
 		return qsearch(g, alpha, beta);
+
+
+	// razoring
+	if (!pv && !in_check && depth <= 3 && eval(board) + 250*depth < alpha) {
+		Value score = qsearch(g, alpha, alpha + 1);
+		if (score <= alpha)
+			return score;
+	}
+
 
 	rip::vector<Move> moves;
 	rip::vector<std::pair<int, Move>> order;
