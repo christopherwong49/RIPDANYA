@@ -182,11 +182,22 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 	Value best = -VALUE_INFINITE;
 	Move best_move = NullMove;
 
+	int i = 1;
 	for (auto &[_, mv] : order) {
 		bool capt = board.mailbox[mv.dst()] != NO_PIECE;
 
 		g.make_move(mv);
-		Value score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, false);
+
+		Value score;
+		if (i == 1) {
+			score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, pv);
+		} else {
+			score = -negamax(g, d - 1, ply + 1, -alpha - 1, -alpha, false, false);
+			if (score > alpha && score < beta) {
+				score = -negamax(g, d - 1, ply + 1, -beta, -alpha, false, pv);
+			}
+		}
+
 		g.unmake_move();
 		if (early_exit)
 			return 0;
@@ -212,6 +223,8 @@ Value negamax(Game &g, int d, int ply, Value alpha, Value beta, bool root, bool 
 				g_best = best_move;
 			return best;
 		}
+
+		i++;
 	}
 
 	if (best == -VALUE_MATE) {
@@ -248,7 +261,7 @@ Move search(Game &g, int time, int d) {
 	memset(ss, 0, sizeof(ss));
 
 	for (int i = 1; i <= d; i++) {
-		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true, false);
+		Value score = negamax(g, i, 0, -VALUE_INFINITE, VALUE_INFINITE, true, true);
 		if (early_exit)
 			break;
 		std::cout << "info depth " << i << " score " << score_to_string(score) << " nodes " << nodes << " pv " << g_best.to_string() << std::endl;
